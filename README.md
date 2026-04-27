@@ -1,119 +1,166 @@
-# CrisisSync
+# 🚨 Respondr: Rapid Crisis Response & Coordination
 
-CrisisSync is a real-time emergency response platform for hotels. 
+**"In emergencies, every second matters. Our system reduces response time from minutes to seconds."**
 
-## Project Structure
-
-```
-CrisisSync/
-├── frontend/                # Next.js App Router + Tailwind CSS
-│   ├── src/app/             # Pages and API routes
-│   │   ├── page.tsx         # SOS Emergency Trigger & Admin Dashboard
-│   │   ├── layout.tsx       # Root layout
-│   │   └── globals.css      # Global styles
-│   ├── public/              # Static assets (e.g. alert-sound.mp3)
-│   ├── package.json         # Frontend dependencies
-│   └── tailwind.config.ts   # Tailwind configuration
-├── backend/                 # Node.js + Express + Socket.io Server
-│   ├── src/                 # Server source code
-│   │   └── index.ts         # Main server and socket implementation
-│   ├── package.json         # Backend dependencies
-│   └── tsconfig.json        # TypeScript configuration
-├── .planning/               # GSD Project Planning & Metadata
-│   ├── PROJECT.md           # Project context and requirements
-│   ├── ROADMAP.md           # Phased execution roadmap
-│   ├── REQUIREMENTS.md      # Detailed scope definition
-│   └── config.json          # Workflow configuration
-└── README.md                # Project documentation
-```
-
-## Installation Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/SwornoDas/Respondr-.git
-   cd Respondr-
-   ```
-
-2. **Setup the Backend**
-   ```bash
-   cd backend
-   npm install
-   # Create a .env file (see Environment Variables template below)
-   npm run dev # Or use nodemon/ts-node
-   ```
-
-3. **Setup the Frontend**
-   ```bash
-   cd ../frontend
-   npm install
-   # Create a .env.local file
-   npm run dev
-   ```
-
-4. **Add the Sound Asset**
-   Make sure you place an `alert-sound.mp3` file inside the `frontend/public/` directory for the dashboard sound alert to work.
-
-## Environment Variables Template
-
-### Backend (`backend/.env`)
-```env
-PORT=3001
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
-FIREBASE_CREDENTIALS=path_to_firebase_json
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_number
-```
-
-### Frontend (`frontend/.env.local`)
-```env
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-## Core Features Implemented in MVP
-1. **SOS Emergency Trigger:** Guests can select categories (Medical, Fire, Security) and submit room info.
-2. **Real-time Admin Dashboard:** Admins receive real-time updates via Socket.io.
-3. **Sound Alerts:** The dashboard plays an audio alert when a new incident is received.
+Respondr is a mission-critical emergency coordination platform designed for the hospitality industry. It utilizes real-time communication, automated escalation, and AI-driven classification to ensure that no distress signal goes unheard.
 
 ---
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## 🏗️ System Architecture
 
-## Getting Started
+```mermaid
+graph TD
+    subgraph "Client Tier (PWA)"
+        G[Guest SOS Page]
+        A[Admin Dashboard]
+        S[Staff Mobile View]
+    end
 
-First, run the development server:
+    subgraph "Logic Tier (Node.js/Express)"
+        API[REST API]
+        SIO[Socket.io Server]
+        AI[Lightweight NLP Engine]
+    end
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+    subgraph "Data Tier"
+        DB[(Supabase/PostgreSQL)]
+        ST[Supabase Storage]
+    end
+
+    subgraph "External Services"
+        TW[Twilio Voice/SMS]
+    end
+
+    G -->|HTTPS/POST| API
+    API -->|Save| DB
+    API -->|Trigger| AI
+    AI -->|Categorize| API
+    API -->|Emit| SIO
+    SIO -->|Real-time Alert| A
+    SIO -->|Notification| S
+    API -->|Escalation Call| TW
+    TW -->|Voice Call| S
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Detailed Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+Respondr/
+├── frontend/                # Next.js 14 (App Router)
+│   ├── public/              # Alert sounds, high-res hotel maps, PWA icons
+│   ├── src/
+│   │   ├── app/             # Application entry points
+│   │   │   ├── sos/         # Guest SOS trigger interface
+│   │   │   ├── admin/       # Dashboard for hotel management
+│   │   │   └── staff/       # Mobile-optimized task view for responders
+│   │   ├── components/      # Shared UI (Cards, Modals, SOS Button)
+│   │   ├── hooks/           # Custom hooks for Sockets & Data fetching
+│   │   ├── lib/             # API clients (Supabase, Socket.io-client)
+│   │   └── store/           # Global state (Zustand/Context) for active alerts
+├── backend/                 # Node.js + Express
+│   ├── src/
+│   │   ├── controllers/     # Incident & Staff logic
+│   │   ├── middleware/      # Auth, Rate-limiting, Error Handling
+│   │   ├── routes/          # API Route definitions
+│   │   ├── services/        # Twilio, AI/NLP, Supabase integrations
+│   │   ├── sockets/         # Socket.io event handlers
+│   │   └── index.ts         # Server entry & Socket initialization
+├── supabase/                # Database layer
+│   └── schema.sql           # Detailed DDL (Tables, Views, RLS Policies)
+├── .planning/               # GSD Project Planning
+└── README.md                # Project documentation
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📊 Database Schema (Supabase)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### `incidents` Table
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID (PK) | Unique incident identifier |
+| `room_no` | VARCHAR | Hotel room or location ID |
+| `category` | ENUM | 'Medical', 'Fire', 'Security' |
+| `description` | TEXT | Optional user-provided details |
+| `status` | ENUM | 'Reported', 'In Progress', 'Resolved', 'Escalated' |
+| `guest_phone` | VARCHAR | Contact number for the reporting guest |
+| `assigned_staff_id` | UUID (FK) | Reference to the assigned staff member |
+| `created_at` | TIMESTAMP | Auto-generated timestamp |
+| `resolved_at` | TIMESTAMP | Timestamp when status hits 'Resolved' |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### `staff` Table
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID (PK) | Unique staff identifier |
+| `name` | VARCHAR | Full name of staff member |
+| `role` | VARCHAR | e.g., 'Security', 'Nurse', 'Manager' |
+| `phone_number` | VARCHAR | Twilio-compatible phone for escalation calls |
+| `is_online` | BOOLEAN | Current availability status |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔌 API & Real-time Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### REST Endpoints
+- **POST `/api/v1/incidents`**: Trigger a new SOS.
+  - Payload: `{ room_no, category, description, guest_phone }`
+- **PATCH `/api/v1/incidents/:id/status`**: Update incident state.
+- **GET `/api/v1/staff/online`**: List all available responders.
+
+### Socket.io Events
+- **Server -> Client (`new_incident`)**: Broadcasts new alert to all Admin/Staff sessions.
+- **Client -> Server (`acknowledge_incident`)**: Staff signals they are responding.
+- **Server -> Client (`incident_updated`)**: Real-time status sync across all dashboards.
+
+---
+
+## 🔄 The "No-Human-Touch" Workflow (In-Depth)
+
+1.  **Detection**: Guest triggers SOS. The backend receives the request and immediately persists it to Supabase.
+2.  **AI Routing**: An NLP utility parses the `description`. 
+    - *Example*: "Help, there's a fire in 304!" -> System sets category to `Fire` and priority to `Critical`.
+3.  **Instant Dispatch**: The Socket.io server broadcasts to the Admin and relevant Staff.
+4.  **Escalation Logic**:
+    - **T=0s**: Push notification sent to Staff Mobile.
+    - **T=15s**: If no "Acknowledge" event is received, a reminder SMS is sent.
+    - **T=30s**: **Automated Voice Call** initiated via Twilio. The AI Voice reads: *"Emergency Alert. Incident 402, Fire reported in Room 304. Please acknowledge."*
+5.  **Resolution**: Once staff arrives, they hit "Resolve" on their phone. The guest receives a confirmation SMS, and the incident is archived.
+
+---
+
+## ⚡ Setup & Deployment
+
+### Prerequisites
+- Node.js v18+
+- Supabase Project (PostgreSQL + Auth)
+- Twilio Account (for Voice/SMS)
+
+### Environment Variables
+```env
+# Backend
+PORT=3001
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=...
+
+# Frontend
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+```
+
+---
+
+## 🚀 Future Roadmap
+- **Wearable Integration**: Sync with Apple Watch/Fitbit for heart-rate triggered SOS.
+- **Indoor Positioning**: Using Bluetooth Beacons to pinpoint exact guest location within the hotel.
+- **Multi-Tenant Support**: SaaS platform for multiple hotel chains.
+
+---
+
+Built with ❤️ for the future of hospitality safety.
+
