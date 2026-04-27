@@ -46,3 +46,25 @@ USING (true);
 
 -- Create Realtime publication for the incidents table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.incidents;
+
+-- Create Staff Status Table
+CREATE TABLE public.staff_status (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    name TEXT,
+    is_online BOOLEAN DEFAULT false,
+    last_seen TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.staff_status ENABLE ROW LEVEL SECURITY;
+
+-- Policies for staff_status
+CREATE POLICY "Anyone can view staff status" 
+ON public.staff_status FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Staff can update their own status" 
+ON public.staff_status FOR UPDATE TO authenticated USING (true);
+
+-- Add to Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.staff_status;

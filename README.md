@@ -1,166 +1,155 @@
-# 🚨 Respondr: Rapid Crisis Response & Coordination
+# Respondr
 
-**"In emergencies, every second matters. Our system reduces response time from minutes to seconds."**
+Respondr is a rapid crisis response and coordination platform for hospitality teams.
+It is designed to reduce the time between a guest distress signal and a responder action
+by combining fast intake, shared incident state, escalation-ready workflows, and
+operator-focused dashboards.
 
-Respondr is a mission-critical emergency coordination platform designed for the hospitality industry. It utilizes real-time communication, automated escalation, and AI-driven classification to ensure that no distress signal goes unheard.
+## Product surfaces
 
----
+- `Guest SOS`: a low-friction emergency form for guests to report medical, fire, or security incidents.
+- `Admin dashboard`: a command view for triage, acknowledgement, and resolution.
+- `Staff board`: a responder-first task queue for mobile-friendly incident handling.
 
-## 🏗️ System Architecture
+## Current architecture
 
-```mermaid
-graph TD
-    subgraph "Client Tier (PWA)"
-        G[Guest SOS Page]
-        A[Admin Dashboard]
-        S[Staff Mobile View]
-    end
+This repository is now structured as a single Next.js 16 application using the App Router.
+Instead of splitting the codebase into a separate frontend and Express backend too early,
+the app uses the backend-for-frontend pattern:
 
-    subgraph "Logic Tier (Node.js/Express)"
-        API[REST API]
-        SIO[Socket.io Server]
-        AI[Lightweight NLP Engine]
-    end
+- `app` routes handle guest, admin, and staff experiences.
+- `app/api` route handlers expose incident and staff endpoints.
+- `features/incidents` owns the emergency-response domain.
+- `supabase/schema.sql` remains the durable database contract for the future persistent layer.
 
-    subgraph "Data Tier"
-        DB[(Supabase/PostgreSQL)]
-        ST[Supabase Storage]
-    end
+This keeps the project simple right now while still leaving clean seams for:
 
-    subgraph "External Services"
-        TW[Twilio Voice/SMS]
-    end
+- Supabase persistence and auth
+- websocket or realtime event delivery
+- Twilio voice and SMS escalation
+- AI-assisted incident classification
 
-    G -->|HTTPS/POST| API
-    API -->|Save| DB
-    API -->|Trigger| AI
-    AI -->|Categorize| API
-    API -->|Emit| SIO
-    SIO -->|Real-time Alert| A
-    SIO -->|Notification| S
-    API -->|Escalation Call| TW
-    TW -->|Voice Call| S
-```
-
----
-
-## 🛠️ Detailed Project Structure
+## Repository structure
 
 ```text
 Respondr/
-├── frontend/                # Next.js 14 (App Router)
-│   ├── public/              # Alert sounds, high-res hotel maps, PWA icons
-│   ├── src/
-│   │   ├── app/             # Application entry points
-│   │   │   ├── sos/         # Guest SOS trigger interface
-│   │   │   ├── admin/       # Dashboard for hotel management
-│   │   │   └── staff/       # Mobile-optimized task view for responders
-│   │   ├── components/      # Shared UI (Cards, Modals, SOS Button)
-│   │   ├── hooks/           # Custom hooks for Sockets & Data fetching
-│   │   ├── lib/             # API clients (Supabase, Socket.io-client)
-│   │   └── store/           # Global state (Zustand/Context) for active alerts
-├── backend/                 # Node.js + Express
-│   ├── src/
-│   │   ├── controllers/     # Incident & Staff logic
-│   │   ├── middleware/      # Auth, Rate-limiting, Error Handling
-│   │   ├── routes/          # API Route definitions
-│   │   ├── services/        # Twilio, AI/NLP, Supabase integrations
-│   │   ├── sockets/         # Socket.io event handlers
-│   │   └── index.ts         # Server entry & Socket initialization
-├── supabase/                # Database layer
-│   └── schema.sql           # Detailed DDL (Tables, Views, RLS Policies)
-├── .planning/               # GSD Project Planning
-└── README.md                # Project documentation
+|-- public/
+|-- src/
+|   |-- app/
+|   |   |-- (operations)/
+|   |   |   |-- admin/
+|   |   |   |   `-- page.tsx
+|   |   |   |-- sos/
+|   |   |   |   `-- page.tsx
+|   |   |   |-- staff/
+|   |   |   |   `-- page.tsx
+|   |   |   `-- layout.tsx
+|   |   |-- api/
+|   |   |   |-- incidents/
+|   |   |   |   |-- [id]/
+|   |   |   |   |   `-- status/route.ts
+|   |   |   |   `-- route.ts
+|   |   |   `-- staff/
+|   |   |       `-- online/route.ts
+|   |   |-- globals.css
+|   |   |-- layout.tsx
+|   |   `-- page.tsx
+|   |-- components/
+|   |   `-- section-card.tsx
+|   |-- features/
+|   |   `-- incidents/
+|   |       |-- components/
+|   |       |   |-- admin-dashboard.tsx
+|   |       |   |-- guest-sos-form.tsx
+|   |       |   `-- staff-board.tsx
+|   |       |-- hooks/
+|   |       |   `-- use-incident-stream.ts
+|   |       |-- server/
+|   |       |   `-- store.ts
+|   |       |-- constants.ts
+|   |       |-- mock-data.ts
+|   |       |-- types.ts
+|   |       `-- utils.ts
+|   `-- lib/
+|       `-- navigation.ts
+|-- supabase/
+|   `-- schema.sql
+|-- AGENTS.md
+|-- package.json
+`-- README.md
 ```
 
----
+## Why this structure
 
-## 📊 Database Schema (Supabase)
+### 1. Route ownership is obvious
 
-### `incidents` Table
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Unique incident identifier |
-| `room_no` | VARCHAR | Hotel room or location ID |
-| `category` | ENUM | 'Medical', 'Fire', 'Security' |
-| `description` | TEXT | Optional user-provided details |
-| `status` | ENUM | 'Reported', 'In Progress', 'Resolved', 'Escalated' |
-| `guest_phone` | VARCHAR | Contact number for the reporting guest |
-| `assigned_staff_id` | UUID (FK) | Reference to the assigned staff member |
-| `created_at` | TIMESTAMP | Auto-generated timestamp |
-| `resolved_at` | TIMESTAMP | Timestamp when status hits 'Resolved' |
+The public entry points live in `src/app`, which makes it easy to see:
 
-### `staff` Table
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Unique staff identifier |
-| `name` | VARCHAR | Full name of staff member |
-| `role` | VARCHAR | e.g., 'Security', 'Nurse', 'Manager' |
-| `phone_number` | VARCHAR | Twilio-compatible phone for escalation calls |
-| `is_online` | BOOLEAN | Current availability status |
+- what users can visit
+- what API endpoints exist
+- which layouts wrap which sections
 
----
+### 2. Domain logic is not buried inside pages
 
-## 🔌 API & Real-time Documentation
+The incident domain is grouped in `src/features/incidents`, so types, mock data,
+hooks, client components, and server helpers evolve together.
 
-### REST Endpoints
-- **POST `/api/v1/incidents`**: Trigger a new SOS.
-  - Payload: `{ room_no, category, description, guest_phone }`
-- **PATCH `/api/v1/incidents/:id/status`**: Update incident state.
-- **GET `/api/v1/staff/online`**: List all available responders.
+### 3. Server code has a clean upgrade path
 
-### Socket.io Events
-- **Server -> Client (`new_incident`)**: Broadcasts new alert to all Admin/Staff sessions.
-- **Client -> Server (`acknowledge_incident`)**: Staff signals they are responding.
-- **Server -> Client (`incident_updated`)**: Real-time status sync across all dashboards.
+`src/features/incidents/server/store.ts` is currently an in-memory store so the
+UI can work end-to-end. Later this can be replaced with Supabase-backed services
+without changing the page structure.
 
----
+### 4. Shared UI stays lightweight
 
-## 🔄 The "No-Human-Touch" Workflow (In-Depth)
+Reusable presentational pieces live in `src/components`, while cross-cutting app
+configuration stays in `src/lib`.
 
-1.  **Detection**: Guest triggers SOS. The backend receives the request and immediately persists it to Supabase.
-2.  **AI Routing**: An NLP utility parses the `description`. 
-    - *Example*: "Help, there's a fire in 304!" -> System sets category to `Fire` and priority to `Critical`.
-3.  **Instant Dispatch**: The Socket.io server broadcasts to the Admin and relevant Staff.
-4.  **Escalation Logic**:
-    - **T=0s**: Push notification sent to Staff Mobile.
-    - **T=15s**: If no "Acknowledge" event is received, a reminder SMS is sent.
-    - **T=30s**: **Automated Voice Call** initiated via Twilio. The AI Voice reads: *"Emergency Alert. Incident 402, Fire reported in Room 304. Please acknowledge."*
-5.  **Resolution**: Once staff arrives, they hit "Resolve" on their phone. The guest receives a confirmation SMS, and the incident is archived.
+## Request flow
 
----
+1. A guest opens `/sos` and submits an emergency incident.
+2. The form posts to `POST /api/incidents`.
+3. The route handler validates input and writes to the incident service layer.
+4. Admins view the incident queue at `/admin`.
+5. Responders work the task queue at `/staff`.
+6. Status updates flow through `PATCH /api/incidents/[id]/status`.
 
-## ⚡ Setup & Deployment
+## Current status
 
-### Prerequisites
-- Node.js v18+
-- Supabase Project (PostgreSQL + Auth)
-- Twilio Account (for Voice/SMS)
+Working now:
 
-### Environment Variables
+- product routes for guest, admin, and staff
+- shared incident types and mock data
+- internal incident and staff API routes
+- realtime-ready client hook for socket events
+- Supabase schema file for the future persistent model
+
+Still to wire up:
+
+- Supabase database reads and writes
+- Supabase Auth for role-based access
+- websocket backend or hosted realtime provider
+- Twilio escalation logic
+- AI classification and prioritization services
+
+## Environment direction
+
+These are the main variables the project will likely use as the integrations are added:
+
 ```env
-# Backend
-PORT=3001
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_FROM_NUMBER=...
-
-# Frontend
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+NEXT_PUBLIC_SOCKET_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_NUMBER=
 ```
 
----
+## Suggested next steps
 
-## 🚀 Future Roadmap
-- **Wearable Integration**: Sync with Apple Watch/Fitbit for heart-rate triggered SOS.
-- **Indoor Positioning**: Using Bluetooth Beacons to pinpoint exact guest location within the hotel.
-- **Multi-Tenant Support**: SaaS platform for multiple hotel chains.
-
----
-
-Built with ❤️ for the future of hospitality safety.
-
+1. Replace the in-memory incident store with Supabase reads and writes.
+2. Protect `/admin` and `/staff` using Supabase Auth and role checks.
+3. Add realtime delivery for `new_incident` and `incident_updated`.
+4. Move escalation timers and Twilio actions into dedicated server services.
+5. Add audit logs and incident history before going multi-tenant.
