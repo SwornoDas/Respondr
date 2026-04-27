@@ -11,6 +11,24 @@ operator-focused dashboards.
 - `Admin dashboard`: a command view for triage, acknowledgement, and resolution.
 - `Staff board`: a responder-first task queue for mobile-friendly incident handling.
 
+## Getting Started
+
+1.  **Clone the repository**
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Set up environment variables**:
+    - Copy the example environment file:
+      ```bash
+      cp .env.example .env.local
+      ```
+    - Update the values in `.env.local` with your Supabase credentials.
+4.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
+
 ## Current architecture
 
 This repository is now structured as a single Next.js 16 application using the App Router.
@@ -132,15 +150,20 @@ Still to wire up:
 - Twilio escalation logic
 - AI classification and prioritization services
 
-## Environment direction
+## Environment variables
 
-These are the main variables the project will likely use as the integrations are added:
+The project uses the following environment variables. You can find a template in `.env.example`.
 
 ```env
-NEXT_PUBLIC_SOCKET_URL=
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
+# Socket.io (Future)
+NEXT_PUBLIC_SOCKET_URL=
+
+# Twilio (Future)
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=

@@ -1,171 +1,214 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
-  BrainCircuit,
-  Building2,
-  LifeBuoy,
-  ShieldCheck,
+  ShieldAlert,
   Smartphone,
-  TimerReset,
+  CheckCircle2,
+  Zap,
+  Globe,
+  Lock,
 } from "lucide-react";
 
-import { SectionCard } from "@/components/section-card";
-import { experienceLinks, repositoryLayers } from "@/lib/navigation";
+import { experienceLinks } from "@/lib/navigation";
 
-const architectureHighlights = [
+const features = [
   {
-    title: "Rapid intake",
-    description:
-      "Guest SOS flows stay focused on speed, with category-first entry and room capture.",
-    icon: LifeBuoy,
+    title: "Instant SOS Intake",
+    description: "One-tap emergency trigger for guests with instant room identification and category triage.",
+    icon: Zap,
   },
   {
-    title: "AI-assisted triage",
-    description:
-      "Incident services are separated so we can classify urgency and route responders without bloating the page layer.",
-    icon: BrainCircuit,
-  },
-  {
-    title: "Escalation-ready delivery",
-    description:
-      "Admin and staff experiences sit beside API routes so real-time notifications and fallback escalation can plug in cleanly.",
+    title: "Centralized Response",
+    description: "Real-time command center for hotel admin to track, manage, and escalate every incident.",
     icon: BellRing,
   },
   {
-    title: "Operations visibility",
-    description:
-      "Shared incident types, mock data, and server utilities make the transition to Supabase and Twilio predictable.",
-    icon: ShieldCheck,
+    title: "Mobile First Staff",
+    description: "Dedicated mobile view for responders to receive tasks, navigate, and report status instantly.",
+    icon: Smartphone,
+  },
+  {
+    title: "Enterprise Security",
+    description: "Secure, role-based access control with comprehensive audit logs for safety compliance.",
+    icon: Lock,
   },
 ];
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-6 py-8 md:px-8 lg:px-12">
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <SectionCard
-          eyebrow="Project Direction"
-          title="Respondr is now organized around the real product, not the starter template."
-          description="The app is split into guest, admin, and staff experiences, with shared incident domain logic and Next route handlers ready to become the backend-for-frontend layer."
-          className="overflow-hidden bg-[linear-gradient(135deg,rgba(184,50,38,0.96),rgba(243,115,53,0.9))] text-white"
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            {experienceLinks
-              .filter((item) => item.href !== "/")
-              .map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-2xl border border-white/20 bg-white/10 p-4 transition hover:bg-white/16"
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <item.icon className="h-5 w-5" />
-                    <ArrowRight className="h-4 w-4 opacity-75" />
-                  </div>
-                  <h2 className="text-lg font-semibold">{item.label}</h2>
-                  <p className="mt-2 text-sm text-white/80">{item.description}</p>
-                </Link>
-              ))}
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          eyebrow="Operational Shape"
-          title="What changed"
-          description="Instead of keeping everything in one client page, the repo now separates route concerns, feature logic, and server-side incident services."
-        >
-          <ul className="space-y-3 text-sm text-[var(--muted-ink)]">
-            <li className="flex items-start gap-3">
-              <Building2 className="mt-0.5 h-4 w-4 text-[var(--accent-strong)]" />
-              <span>`src/app` owns routes and route handlers.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <Smartphone className="mt-0.5 h-4 w-4 text-[var(--accent-strong)]" />
-              <span>`src/features/incidents` owns the emergency domain.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <TimerReset className="mt-0.5 h-4 w-4 text-[var(--accent-strong)]" />
-              <span>`src/lib` and `src/components` hold shared navigation and UI primitives.</span>
-            </li>
-          </ul>
-        </SectionCard>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {architectureHighlights.map((item) => (
-          <SectionCard
-            key={item.title}
-            title={item.title}
-            description={item.description}
-            className="bg-white/78"
+    <div className="flex flex-col min-h-screen">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 glass-card px-6 py-4 flex items-center justify-between mx-auto w-[95%] max-w-7xl mt-4 rounded-3xl">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Respondr" width={32} height={32} className="rounded-lg" />
+          <span className="text-xl font-bold tracking-tight text-ink-strong">Respondr</span>
+        </div>
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+          <Link href="#features" className="hover:text-accent transition-colors">Features</Link>
+          <Link href="#how-it-works" className="hover:text-accent transition-colors">How it Works</Link>
+        </div>
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/login" 
+            className="text-sm font-medium hover:text-accent transition-colors"
           >
-            <item.icon className="h-5 w-5 text-[var(--accent-strong)]" />
-          </SectionCard>
-        ))}
+            Sign In
+          </Link>
+          <Link 
+            href="/sos" 
+            className="bg-accent text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-accent-hover transition-all hover:scale-105 active:scale-95 shadow-lg shadow-accent/20"
+          >
+            Guest SOS
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative px-6 pt-20 pb-32 overflow-hidden">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-soft text-accent text-xs font-bold uppercase tracking-wider mb-6">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Next-Gen Hospitality Safety</span>
+            </div>
+            <h1 className="text-5xl lg:text-7xl font-extrabold text-ink-strong leading-[1.1] mb-6">
+              Emergency Response, <br />
+              <span className="text-gradient">Simplified.</span>
+            </h1>
+            <p className="text-xl text-muted leading-relaxed mb-10 max-w-xl">
+              Connect guests, staff, and admin in critical moments. Respondr provides real-time emergency coordination for modern hotels.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link 
+                href="/sos" 
+                className="flex items-center justify-center gap-2 bg-accent text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-accent-hover transition-all hover:translate-y-[-2px] shadow-xl shadow-accent/20"
+              >
+                Trigger Guest SOS
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link 
+                href="/admin" 
+                className="flex items-center justify-center gap-2 bg-white border-2 border-slate-200 px-8 py-4 rounded-2xl text-lg font-bold hover:border-slate-300 transition-all hover:translate-y-[-2px]"
+              >
+                Admin Dashboard
+              </Link>
+            </div>
+            <div className="mt-12 flex items-center gap-6 text-sm text-muted">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>PWA Ready</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>Real-time Triage</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>Twilio Integrated</span>
+              </div>
+            </div>
+          </div>
+          <div className="relative lg:h-[600px] flex items-center justify-center">
+            <div className="absolute inset-0 bg-accent/5 rounded-full blur-3xl animate-pulse" />
+            <div className="relative animate-float">
+              <Image 
+                src="/hero.png" 
+                alt="Emergency Response Platform" 
+                width={500} 
+                height={600} 
+                className="rounded-[40px] shadow-2xl"
+                priority
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <SectionCard
-          eyebrow="Repository Layers"
-          title="Current structure"
-          description="This layout stays close to Next 16 conventions while matching the crisis-response workflow from the README."
-        >
-          <div className="space-y-3">
-            {repositoryLayers.map((layer) => (
-              <div
-                key={layer.path}
-                className="rounded-2xl border border-[var(--line)] bg-white/70 p-4"
+      {/* Portals Section */}
+      <section id="how-it-works" className="py-24 bg-slate-50/50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-ink-strong mb-4">One Platform, Three Experiences</h2>
+            <p className="text-muted max-w-2xl mx-auto">Seamless coordination between every stakeholder in the hotel ecosystem during an emergency.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {experienceLinks.filter(l => l.href !== "/").map((item) => (
+              <Link 
+                key={item.href}
+                href={item.href}
+                className="group relative glass-card p-8 rounded-[32px] transition-all hover:scale-[1.02] hover:shadow-2xl border-transparent hover:border-accent/20"
               >
-                <div className="text-sm font-semibold text-[var(--ink-strong)]">
-                  {layer.path}
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-6 group-hover:bg-accent/10 transition-colors">
+                  <item.icon className="w-7 h-7 text-ink group-hover:text-accent transition-colors" />
                 </div>
-                <p className="mt-2 text-sm text-[var(--muted-ink)]">
-                  {layer.description}
-                </p>
-              </div>
+                <h3 className="text-2xl font-bold mb-3 group-hover:text-accent transition-colors">{item.label}</h3>
+                <p className="text-muted leading-relaxed mb-6">{item.description}</p>
+                <div className="flex items-center gap-2 text-accent font-bold text-sm uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                  Enter Portal
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </Link>
             ))}
           </div>
-        </SectionCard>
+        </div>
+      </section>
 
-        <SectionCard
-          eyebrow="Next Build-Out"
-          title="Best next implementation steps"
-          description="The structure is ready for real integrations without forcing a premature split into a separate Express backend."
-          className="bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(246,232,221,0.88))]"
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4">
-              <h3 className="font-semibold text-[var(--ink-strong)]">Data layer</h3>
-              <p className="mt-2 text-sm text-[var(--muted-ink)]">
-                Replace the in-memory incident store with Supabase tables and policies from
-                `supabase/schema.sql`.
-              </p>
+      {/* Features Grid */}
+      <section id="features" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl font-bold text-ink-strong mb-8 leading-tight">
+                Everything you need to <br />
+                <span className="text-gradient">Protect your Guests.</span>
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-8">
+                {features.map((f, i) => (
+                  <div key={i} className="space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                      <f.icon className="w-5 h-5 text-accent" />
+                    </div>
+                    <h4 className="font-bold text-lg">{f.title}</h4>
+                    <p className="text-sm text-muted leading-relaxed">{f.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4">
-              <h3 className="font-semibold text-[var(--ink-strong)]">Realtime</h3>
-              <p className="mt-2 text-sm text-[var(--muted-ink)]">
-                Point `NEXT_PUBLIC_SOCKET_URL` at a websocket service and the dashboards will
-                start listening without changing route structure.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4">
-              <h3 className="font-semibold text-[var(--ink-strong)]">Escalation</h3>
-              <p className="mt-2 text-sm text-[var(--muted-ink)]">
-                Add Twilio orchestration under server services, not inside pages, so retries
-                and audit logs stay testable.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4">
-              <h3 className="font-semibold text-[var(--ink-strong)]">Auth and roles</h3>
-              <p className="mt-2 text-sm text-[var(--muted-ink)]">
-                Gate `/admin` and `/staff` through Supabase Auth while leaving `/sos` open for
-                guests.
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4 pt-12">
+                <div className="h-64 rounded-3xl bg-slate-100 animate-pulse" />
+                <div className="h-48 rounded-3xl bg-accent/5" />
+              </div>
+              <div className="space-y-4">
+                <div className="h-48 rounded-3xl bg-ink/5" />
+                <div className="h-64 rounded-3xl bg-slate-100 animate-pulse" />
+              </div>
             </div>
           </div>
-        </SectionCard>
+        </div>
       </section>
-    </main>
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-center gap-2 opacity-50">
+            <Image src="/logo.png" alt="Respondr" width={24} height={24} />
+            <span className="font-bold">Respondr</span>
+            <span className="text-xs ml-2">© 2026 Hospitality Safety Inc.</span>
+          </div>
+          <div className="flex items-center gap-8 text-sm text-muted">
+            <Link href="#" className="hover:text-accent">Privacy Policy</Link>
+            <Link href="#" className="hover:text-accent">Terms of Service</Link>
+            <Link href="#" className="hover:text-accent flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              English
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
+
