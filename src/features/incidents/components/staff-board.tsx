@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { CheckCircle2, PhoneCall, Timer, UserRound } from "lucide-react";
 
 import { SectionCard } from "@/components/section-card";

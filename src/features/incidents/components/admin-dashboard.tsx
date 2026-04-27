@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useDeferredValue, useState, type ComponentType } from "react";
+import { useEffect, startTransition, useDeferredValue, useState, type ComponentType } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   BellRing,
   Clock3,

@@ -45,9 +45,11 @@ export async function listOnlineStaff() {
 
   return data.map(record => ({
     id: record.id,
-    name: record.name,
-    email: record.email,
+    name: record.name || 'Unknown',
+    role: 'Staff', // Default since schema doesn't have it yet
+    phoneNumber: 'Not provided', // Default
     isOnline: record.is_online,
+    responseWindowSeconds: 300, // Default 5 mins
   })) as StaffMember[];
 }
 
