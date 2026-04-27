@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { AdminDashboard } from "@/features/incidents/components/admin-dashboard";
 import { listIncidents } from "@/features/incidents/server/store";
 

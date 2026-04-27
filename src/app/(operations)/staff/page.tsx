@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { StaffBoard } from "@/features/incidents/components/staff-board";
 import { listIncidents, listOnlineStaff } from "@/features/incidents/server/store";
 
