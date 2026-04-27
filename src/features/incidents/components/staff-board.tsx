@@ -104,6 +104,17 @@ export function StaffBoard({
         title="Team availability"
         description="Toggle your status to receive active incident alerts and appear on the admin command board."
       >
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = '/login';
+            }}
+            className="rounded-full border border-[var(--line)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:bg-white"
+          >
+            Sign Out
+          </button>
+        </div>
         <div className="space-y-4">
           {/* Status Toggle Card */}
           <div className="rounded-[24px] border border-[var(--accent-line)] bg-[var(--accent-surface)] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">

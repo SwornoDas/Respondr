@@ -1,53 +1,25 @@
--- Supabase Schema for CrisisSync
+-- Supabase Schema for Respondr
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- Enable UUID extension
+-- Enable Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Enum for Incident Types
+-- 1. Custom Types
 CREATE TYPE incident_type AS ENUM ('Medical', 'Fire', 'Security');
-
--- Enum for Incident Statuses
 CREATE TYPE incident_status AS ENUM ('REPORTED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED');
 
--- Create Incidents Table
-CREATE TABLE public.incidents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type incident_type NOT NULL,
-    room VARCHAR(50) NOT NULL,
-    description TEXT,
-    status incident_status NOT NULL DEFAULT 'REPORTED',
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    assigned_to UUID -- Foreign key to a users table if you add staff auth
+-- 2. Tables
+
+-- Profiles: Linked to auth.users
+CREATE TABLE public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    full_name TEXT,
+    role TEXT DEFAULT 'staff' CHECK (role IN ('staff', 'admin')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS)
-ALTER TABLE public.incidents ENABLE ROW LEVEL SECURITY;
-
--- Policy: Anyone can insert (Guests triggering SOS)
-CREATE POLICY "Anyone can report an incident" 
-ON public.incidents
-FOR INSERT 
-TO public
-WITH CHECK (true);
-
--- Policy: Only authenticated users (Admins/Staff) can select/update incidents
--- Assuming Supabase Auth is enabled
-CREATE POLICY "Admins can view incidents" 
-ON public.incidents
-FOR SELECT 
-TO authenticated 
-USING (true);
-
-CREATE POLICY "Admins can update incidents" 
-ON public.incidents
-FOR UPDATE 
-TO authenticated 
-USING (true);
-
--- Create Realtime publication for the incidents table
-ALTER PUBLICATION supabase_realtime ADD TABLE public.incidents;
-
--- Create Staff Status Table
+-- Staff Status: Real-time availability
 CREATE TABLE public.staff_status (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
@@ -56,15 +28,64 @@ CREATE TABLE public.staff_status (
     last_seen TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable RLS
-ALTER TABLE public.staff_status ENABLE ROW LEVEL SECURITY;
+-- Incidents: SOS alerts
+CREATE TABLE public.incidents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    type incident_type NOT NULL,
+    room VARCHAR(50) NOT NULL,
+    description TEXT,
+    status incident_status NOT NULL DEFAULT 'REPORTED',
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    assigned_to UUID REFERENCES public.profiles(id)
+);
 
--- Policies for staff_status
-CREATE POLICY "Anyone can view staff status" 
+-- 3. Security (RLS)
+
+-- Enable RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incidents ENABLE ROW LEVEL SECURITY;
+
+-- Profiles Policies
+CREATE POLICY "Users can view their own profile" 
+ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id);
+
+-- Staff Status Policies
+CREATE POLICY "Authenticated staff can view status roster" 
 ON public.staff_status FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Staff can update their own status" 
+CREATE POLICY "Staff can update their own online status" 
 ON public.staff_status FOR UPDATE TO authenticated USING (true);
 
--- Add to Realtime
+-- Incidents Policies
+CREATE POLICY "Public can trigger SOS" 
+ON public.incidents FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+CREATE POLICY "Staff can manage all incidents" 
+ON public.incidents FOR ALL TO authenticated USING (true);
+
+-- 4. Triggers & Automation
+
+-- Trigger to create profile on auth signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, full_name, role)
+    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', 'staff');
+    
+    -- Also initialize staff_status record
+    INSERT INTO public.staff_status (email, name)
+    VALUES (NEW.email, NEW.raw_user_meta_data->>'full_name');
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 5. Real-time Publications
+ALTER PUBLICATION supabase_realtime ADD TABLE public.incidents;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.staff_status;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;

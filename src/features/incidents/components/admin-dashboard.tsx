@@ -160,6 +160,17 @@ export function AdminDashboard({
         title="Coordinate every active incident from one place"
         description="This dashboard keeps triage, acknowledgement, and resolution behavior in a dedicated operations experience rather than in the guest page."
       >
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = '/login';
+            }}
+            className="rounded-full border border-[var(--line)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ink-strong)] transition hover:bg-white"
+          >
+            Sign Out
+          </button>
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           <MetricCard
             title="Active incidents"
