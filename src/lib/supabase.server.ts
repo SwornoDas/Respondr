@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
@@ -10,8 +10,8 @@ if (
   !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 ) {
   console.warn(
-    "Supabase credentials missing. Client initialized with placeholders for build compatibility.",
+    "Supabase credentials missing. Server client initialized with placeholders for build compatibility.",
   );
 }
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

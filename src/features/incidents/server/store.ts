@@ -4,22 +4,22 @@ import {
   type StaffMember,
   type UpdateIncidentStatusInput,
 } from "../types";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase.server";
 import { getPriorityForIncident } from "../utils";
 
 export async function listIncidents() {
   const { data, error } = await supabase
-    .from('incidents')
-    .select('*')
-    .order('timestamp', { ascending: false });
+    .from("incidents")
+    .select("*")
+    .order("timestamp", { ascending: false });
 
   if (error) {
-    console.error('Error listing incidents:', error);
+    console.error("Error listing incidents:", error);
     return [];
   }
 
   // Map database fields to application types
-  return data.map(record => ({
+  return data.map((record) => ({
     id: record.id,
     category: record.type,
     roomNumber: record.room,
@@ -27,27 +27,27 @@ export async function listIncidents() {
     status: record.status,
     priority: getPriorityForIncident(record.type, record.description),
     createdAt: record.timestamp,
-    guestPhone: '', // Not in current schema, would need update if required
+    guestPhone: "", // Not in current schema, would need update if required
     assignedStaffId: record.assigned_to,
   })) as IncidentRecord[];
 }
 
 export async function listOnlineStaff() {
   const { data, error } = await supabase
-    .from('staff_status')
-    .select('*')
-    .eq('is_online', true);
+    .from("staff_status")
+    .select("*")
+    .eq("is_online", true);
 
   if (error) {
-    console.error('Error listing staff:', error);
+    console.error("Error listing staff:", error);
     return [];
   }
 
-  return data.map(record => ({
+  return data.map((record) => ({
     id: record.id,
-    name: record.name || 'Unknown',
-    role: 'Staff', // Default since schema doesn't have it yet
-    phoneNumber: 'Not provided', // Default
+    name: record.name || "Unknown",
+    role: "Staff", // Default since schema doesn't have it yet
+    phoneNumber: "Not provided", // Default
     isOnline: record.is_online,
     responseWindowSeconds: 300, // Default 5 mins
   })) as StaffMember[];
@@ -55,19 +55,19 @@ export async function listOnlineStaff() {
 
 export async function createIncident(input: CreateIncidentInput) {
   const { data, error } = await supabase
-    .from('incidents')
+    .from("incidents")
     .insert({
       type: input.category,
       room: input.roomNumber,
       description: input.description,
-      status: 'REPORTED',
+      status: "REPORTED",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating incident:', error);
-    throw new Error('Failed to create incident');
+    console.error("Error creating incident:", error);
+    throw new Error("Failed to create incident");
   }
 
   return {
@@ -87,17 +87,17 @@ export async function updateIncidentStatus(
   input: UpdateIncidentStatusInput,
 ) {
   const { data, error } = await supabase
-    .from('incidents')
+    .from("incidents")
     .update({
       status: input.status,
       assigned_to: input.assignedStaffId,
     })
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating incident:', error);
+    console.error("Error updating incident:", error);
     return null;
   }
 
