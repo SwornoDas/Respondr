@@ -59,7 +59,10 @@ export function GuestSosForm() {
     // Step 1: Insert space at every letter→digit boundary (e.g. "room556" → "room 556")
     let formatted = raw.replace(/([a-zA-Z])(\d)/g, "$1 $2");
 
-    // Step 2: Capitalize the first letter of every word
+    // Step 2: Insert space at every digit→letter boundary (e.g. "2room" → "2 room")
+    formatted = formatted.replace(/(\d)([a-zA-Z])/g, "$1 $2");
+
+    // Step 3: Capitalize the first letter of every word
     formatted = formatted.replace(/\b([a-zA-Z])/g, (match) => match.toUpperCase());
 
     return formatted;
