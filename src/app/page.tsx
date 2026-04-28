@@ -13,6 +13,24 @@ import {
 
 import { experienceLinks } from "@/lib/navigation";
 
+const quickSteps = [
+  {
+    title: "Guest SOS",
+    description: "A guest reports a medical, fire, or security incident from the room in seconds.",
+    icon: ShieldAlert,
+  },
+  {
+    title: "Admin triage",
+    description: "Operators see one shared incident queue to acknowledge, escalate, and resolve faster.",
+    icon: BellRing,
+  },
+  {
+    title: "Staff response",
+    description: "Mobile-first responders get the task, update status, and keep the whole team aligned.",
+    icon: Smartphone,
+  },
+];
+
 const features = [
   {
     title: "Instant SOS Intake",
@@ -78,7 +96,7 @@ export default function Home() {
               <span className="text-gradient">Simplified.</span>
             </h1>
             <p className="text-xl text-muted leading-relaxed mb-10 max-w-xl">
-              Connect guests, staff, and admin in critical moments. Respondr provides real-time emergency coordination for modern hotels.
+              Respondr helps hospitality teams move from a guest distress signal to a coordinated response in seconds. Guests send an SOS, admins triage it in a shared dashboard, and staff receive the next action on mobile.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link 
@@ -94,6 +112,17 @@ export default function Home() {
               >
                 Admin Dashboard
               </Link>
+            </div>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {quickSteps.map((step) => (
+                <div key={step.title} className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
+                    <step.icon className="h-5 w-5 text-accent" />
+                  </div>
+                  <h3 className="text-sm font-bold text-ink-strong">{step.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">{step.description}</p>
+                </div>
+              ))}
             </div>
             <div className="mt-12 flex items-center gap-6 text-sm text-muted">
               <div className="flex items-center gap-2">
@@ -131,7 +160,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-ink-strong mb-4">One Platform, Three Experiences</h2>
-            <p className="text-muted max-w-2xl mx-auto">Seamless coordination between every stakeholder in the hotel ecosystem during an emergency.</p>
+            <p className="text-muted max-w-2xl mx-auto">Guests submit incidents, admins coordinate the response, and staff get the next task immediately. That shortens the gap between distress and action.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {experienceLinks.filter(l => l.href !== "/").map((item) => (

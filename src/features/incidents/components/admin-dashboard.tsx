@@ -3,14 +3,21 @@
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { supabase } from "@/lib/supabase";
 import {
+  Activity,
   BellRing,
+  Building2,
   Clock3,
+  LayoutDashboard,
   LogOut,
+  Menu,
+  Search,
+  Settings,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   TriangleAlert,
   Users,
+  X,
 } from "lucide-react";
 
 import { useIncidentStream } from "../hooks/use-incident-stream";
@@ -30,6 +37,14 @@ const socketEvents = {
   status: "status_updated",
 } as const;
 
+const sidebarNav = [
+  { icon: LayoutDashboard, label: "Dashboard", active: true },
+  { icon: BellRing, label: "Incidents", active: false },
+  { icon: Users, label: "Staff", active: false },
+  { icon: Activity, label: "Analytics", active: false },
+  { icon: Settings, label: "Settings", active: false },
+];
+
 export function AdminDashboard({
   initialIncidents,
   initialStaff,
@@ -45,6 +60,10 @@ export function AdminDashboard({
   const [highlightedIncidentId, setHighlightedIncidentId] = useState<
     string | null
   >(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<IncidentStatus | "ALL">(
+    "ALL",
+  );
   const previousTopIncidentId = useRef<string | null>(null);
   const alertTimeoutRef = useRef<number | null>(null);
 
@@ -121,6 +140,11 @@ export function AdminDashboard({
     });
   }, [initialStaff, incidents]);
 
+  const filteredIncidents = useMemo(() => {
+    if (filterStatus === "ALL") return incidents;
+    return incidents.filter((i) => i.status === filterStatus);
+  }, [incidents, filterStatus]);
+
   const activeIncidents = useMemo(
     () => incidents.filter((incident) => incident.status !== "RESOLVED"),
     [incidents],
@@ -154,6 +178,11 @@ export function AdminDashboard({
   const selectedIncident =
     incidents.find((incident) => incident.id === selectedIncidentId) ?? null;
 
+  const reportedCount = incidents.filter((i) => i.status === "REPORTED").length;
+  const inProgressCount = incidents.filter(
+    (i) => i.status === "IN_PROGRESS",
+  ).length;
+
   async function persistIncidentUpdate(
     incident: IncidentRecord,
     nextStatus: IncidentStatus,
@@ -173,18 +202,14 @@ export function AdminDashboard({
     try {
       const response = await fetch(`/api/incidents/${incident.id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: nextStatus,
           assignedStaffId: incident.assignedStaffId ?? null,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Unable to update the incident.");
-      }
+      if (!response.ok) throw new Error("Unable to update the incident.");
 
       const updatedIncident = (await response.json()) as IncidentRecord;
 
@@ -225,18 +250,14 @@ export function AdminDashboard({
     try {
       const response = await fetch(`/api/incidents/${incident.id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: incident.status,
           assignedStaffId: staff.id,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Unable to assign the incident.");
-      }
+      if (!response.ok) throw new Error("Unable to assign the incident.");
 
       const updatedIncident = (await response.json()) as IncidentRecord;
 
@@ -263,134 +284,273 @@ export function AdminDashboard({
 
   const latestElapsed = latestIncident
     ? formatRelativeTime(latestIncident.createdAt)
-    : "No active incidents";
+    : "No incidents";
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-[#E5E7EB]">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-4 py-4 sm:px-6 lg:px-8">
-        <header className="sticky top-4 z-30 rounded-[28px] border border-[#1F2A37] bg-[rgba(11,15,20,0.92)] px-4 py-4 shadow-[0_16px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:px-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1F2A37] bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(139,92,246,0.16))] text-[#BFDBFE] shadow-[0_0_0_1px_rgba(59,130,246,0.08)]">
-                <ShieldAlert className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                    Respondr
-                  </h1>
-                  <span
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-                      connectionState === "connected"
-                        ? "border-emerald-400/20 bg-emerald-500/15 text-emerald-100"
-                        : "border-amber-400/20 bg-amber-500/15 text-amber-100"
-                    }`}
-                  >
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        connectionState === "connected"
-                          ? "bg-emerald-400"
-                          : "bg-amber-400"
-                      }`}
-                    />
-                    System Active
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-[#9CA3AF]">
-                  Live emergency command center for hotel response teams.
-                </p>
-              </div>
+    <div className="flex h-screen overflow-hidden bg-[#080b10] text-white/80">
+      {/* ── Sidebar ── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-white/[0.04] bg-[#0a0e14] transition-transform duration-300 lg:static lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-3 border-b border-white/[0.04] px-5 py-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-lg shadow-rose-500/20">
+            <ShieldAlert className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-tight text-white">
+              Respondr
+            </h1>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-400/60">
+              Command Center
+            </p>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto rounded-lg p-1.5 text-white/30 hover:bg-white/5 lg:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 space-y-1 px-3 py-4">
+          {sidebarNav.map((item) => (
+            <button
+              key={item.label}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                item.active
+                  ? "bg-gradient-to-r from-rose-500/10 to-orange-500/5 text-white border border-rose-500/15"
+                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Sidebar footer */}
+        <div className="border-t border-white/[0.04] p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500/15 to-orange-500/15 text-xs font-bold text-rose-300">
+              OH
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white/70 truncate">
+                Olivia Hart
+              </p>
+              <p className="text-[10px] text-white/30">Administrator</p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="rounded-lg p-2 text-white/25 transition hover:bg-white/5 hover:text-rose-400"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Main Content ── */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center gap-4 border-b border-white/[0.04] bg-[#0a0e14]/80 px-4 py-3 backdrop-blur-xl lg:px-6">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 text-white/40 hover:bg-white/5 lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+            <input
+              type="text"
+              placeholder="Search incidents, rooms, staff..."
+              className="w-full rounded-xl border border-white/[0.06] bg-white/[0.03] py-2 pl-9 pr-4 text-sm text-white/70 outline-none transition placeholder:text-white/20 focus:border-rose-500/25 focus:bg-white/[0.05]"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Connection badge */}
+            <span
+              className={`hidden sm:inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold ${
+                connectionState === "connected"
+                  ? "border-emerald-500/15 bg-emerald-500/8 text-emerald-400"
+                  : "border-amber-500/15 bg-amber-500/8 text-amber-400"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  connectionState === "connected"
+                    ? "bg-emerald-400"
+                    : "bg-amber-400 animate-pulse"
+                }`}
+              />
+              {connectionState === "connected" ? "Live" : "Connecting"}
+            </span>
+
+            {/* Time */}
+            <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/40">
+              <Clock3 className="h-3 w-3" />
+              {currentTime.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-sm text-[#9CA3AF]">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2">
-                <Clock3 className="h-4 w-4 text-[#6B7280]" />
-                {currentTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2">
-                <Users className="h-4 w-4 text-[#6B7280]" />
-                Admin: Olivia Hart
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = "/login";
-                }}
-                className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#121821] px-4 py-2 font-semibold text-[#E5E7EB] transition hover:border-[#3B82F6]/35 hover:bg-[#15202d]"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
+            {/* Notification bell */}
+            <button
+              type="button"
+              onClick={async () => {
+                if (
+                  typeof window !== "undefined" &&
+                  "Notification" in window &&
+                  Notification.permission === "default"
+                ) {
+                  await Notification.requestPermission();
+                }
+              }}
+              className="relative rounded-lg border border-white/[0.06] bg-white/[0.03] p-2 text-white/40 transition hover:text-rose-400"
+            >
+              <BellRing className="h-4 w-4" />
+              {reportedCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                  {reportedCount}
+                </span>
+              )}
+            </button>
           </div>
         </header>
 
-        <main className="mt-6 grid flex-1 gap-6 xl:grid-cols-[minmax(0,2.1fr)_minmax(360px,1fr)]">
-          <section className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <StatsCard
-                title="Total Active Incidents"
-                value={String(totalActive)}
-                helper="Open incidents requiring immediate attention."
-                icon={BellRing}
-                tone="blue"
-              />
-              <StatsCard
-                title="Avg Response Time"
-                value={`${avgResponseMinutes}m`}
-                helper="Average age of incidents still in motion."
-                icon={Clock3}
-                tone="amber"
-              />
-              <StatsCard
-                title="Resolved Today"
-                value={String(resolvedToday)}
-                helper="Completed incidents cleared from the queue."
-                icon={ShieldCheck}
-                tone="emerald"
-              />
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          {/* Page title */}
+          <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-white/90">
+                Incident Command Center
+              </h2>
+              <p className="mt-0.5 text-xs text-white/35">
+                Real-time emergency coordination for your property
+              </p>
             </div>
+            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-xs text-white/35">
+                <Building2 className="h-3 w-3" />
+                Property HQ
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-xs text-white/35">
+                <Sparkles className="h-3 w-3 text-rose-400/60" />
+                {latestElapsed}
+              </span>
+            </div>
+          </div>
 
-            <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                    Incident feed
-                  </p>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
-                    New incidents appear at the top
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[#9CA3AF]">
-                    The queue is ordered by urgency and time. Assign responders,
-                    advance status, and resolve without leaving the feed.
-                  </p>
-                </div>
+          {/* Stats grid */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+            <StatsCard
+              title="Active Incidents"
+              value={String(totalActive)}
+              helper="Open incidents requiring attention"
+              icon={BellRing}
+              tone="rose"
+            />
+            <StatsCard
+              title="Avg Response"
+              value={`${avgResponseMinutes}m`}
+              helper="Average response time active"
+              icon={Clock3}
+              tone="amber"
+            />
+            <StatsCard
+              title="Resolved Today"
+              value={String(resolvedToday)}
+              helper="Successfully resolved incidents"
+              icon={ShieldCheck}
+              tone="emerald"
+            />
+            <StatsCard
+              title="Staff Online"
+              value={String(staffRoster.filter((s) => s.isOnline).length)}
+              helper="Available responders on duty"
+              icon={Users}
+              tone="violet"
+            />
+          </div>
 
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2 text-sm text-[#9CA3AF]">
-                  <Sparkles className="h-4 w-4 text-[#3B82F6]" />
-                  {latestElapsed}
+          {errorMessage ? (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-300">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          ) : null}
+
+          {/* Main grid */}
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,1fr)]">
+            {/* Incident feed */}
+            <section className="space-y-4">
+              {/* Filter tabs */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                  {(
+                    [
+                      { key: "ALL", label: "All" },
+                      { key: "REPORTED", label: "Reported" },
+                      { key: "IN_PROGRESS", label: "Active" },
+                      { key: "RESOLVED", label: "Resolved" },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setFilterStatus(tab.key)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        filterStatus === tab.key
+                          ? "bg-rose-500/12 text-rose-300 border border-rose-500/20"
+                          : "text-white/30 hover:text-white/50 border border-transparent"
+                      }`}
+                    >
+                      {tab.label}
+                      {tab.key === "REPORTED" && reportedCount > 0 && (
+                        <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-[9px] text-rose-300">
+                          {reportedCount}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
+                <span className="text-[11px] text-white/25">
+                  {filteredIncidents.length} incident
+                  {filteredIncidents.length !== 1 ? "s" : ""}
+                </span>
               </div>
 
-              {errorMessage ? (
-                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
-                  <TriangleAlert className="mt-0.5 h-4 w-4" />
-                  <span>{errorMessage}</span>
-                </div>
-              ) : null}
-
-              <div className="mt-5 space-y-4">
-                {incidents.length === 0 ? (
-                  <div className="rounded-[24px] border border-dashed border-[#1F2A37] bg-[#0B0F14] p-8 text-sm text-[#9CA3AF]">
-                    No incidents are currently active.
+              {/* Incident list */}
+              <div className="space-y-3">
+                {filteredIncidents.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/[0.06] bg-white/[0.02] p-10 text-center text-sm text-white/25">
+                    No incidents match this filter.
                   </div>
                 ) : (
-                  incidents.map((incident) => (
+                  filteredIncidents.map((incident) => (
                     <IncidentCard
                       key={incident.id}
                       incident={incident}
@@ -414,166 +574,126 @@ export function AdminDashboard({
                   ))
                 )}
               </div>
-            </div>
-          </section>
+            </section>
 
-          <aside className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                  Situation summary
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
-                  Priority in one glance
-                </h2>
-
-                <div className="mt-5 space-y-3">
+            {/* Right sidebar panels */}
+            <aside className="space-y-4">
+              {/* Situation summary */}
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">
+                  Situation Overview
+                </h3>
+                <div className="mt-4 space-y-2">
                   <SummaryRow
                     label="Reported"
-                    value={
-                      incidents.filter(
-                        (incident) => incident.status === "REPORTED",
-                      ).length
-                    }
+                    value={reportedCount}
                     tone="red"
                   />
                   <SummaryRow
-                    label="In progress"
-                    value={
-                      incidents.filter(
-                        (incident) => incident.status === "IN_PROGRESS",
-                      ).length
-                    }
+                    label="In Progress"
+                    value={inProgressCount}
                     tone="amber"
                   />
                   <SummaryRow
                     label="Resolved"
-                    value={
-                      incidents.filter(
-                        (incident) => incident.status === "RESOLVED",
-                      ).length
-                    }
+                    value={resolvedToday}
                     tone="emerald"
                   />
                 </div>
-
-                <div className="mt-5 rounded-[22px] border border-[#1F2A37] bg-[#0B0F14] p-4 text-sm text-[#9CA3AF]">
-                  Latest event:{" "}
-                  <span className="text-[#E5E7EB]">
+                <div className="mt-4 rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 text-xs text-white/35">
+                  Latest:{" "}
+                  <span className="text-white/60">
                     {latestIncident
-                      ? `${latestIncident.category} / room ${latestIncident.roomNumber}`
+                      ? `${latestIncident.category} / Room ${latestIncident.roomNumber}`
                       : "None"}
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                  Alert system
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
-                  Sound and notification handling
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
-                  New incidents trigger a short tone and optional browser
-                  notification when permissions are enabled.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (
-                      typeof window !== "undefined" &&
-                      "Notification" in window &&
-                      Notification.permission === "default"
-                    ) {
-                      await Notification.requestPermission();
-                    }
-                  }}
-                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-[#3B82F6]/30 bg-[#3B82F6]/12 px-4 py-2.5 text-sm font-semibold text-[#BFDBFE] transition hover:border-[#3B82F6]/55 hover:bg-[#3B82F6]/18"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Enable notifications
-                </button>
-              </div>
-            </div>
-
-            <StaffList
-              title="Active responders"
-              helperText="Staff currently handling incidents and their live assignment status."
-              items={activeResponderItems}
-              emptyMessage="No responders are currently assigned."
-              footer={
-                <p className="text-xs leading-5 text-[#6B7280]">
-                  Responders automatically update when incidents are assigned or
-                  resolved.
-                </p>
-              }
-            />
-          </aside>
+              {/* Active responders */}
+              <StaffList
+                title="Active Responders"
+                helperText="Staff handling incidents"
+                items={activeResponderItems}
+                emptyMessage="No responders assigned."
+                footer={
+                  <p className="text-[10px] leading-4 text-white/20">
+                    Auto-updates when incidents are assigned or resolved.
+                  </p>
+                }
+              />
+            </aside>
+          </div>
         </main>
       </div>
 
+      {/* ── Assignment Panel (slide-over) ── */}
       {selectedIncident ? (
-        <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm">
-          <div className="absolute inset-y-0 right-0 w-full max-w-xl border-l border-[#1F2A37] bg-[#0B0F14] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                  Assignment panel
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
-                  Assign a responder instantly
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
-                  {selectedIncident.category} in room{" "}
-                  {selectedIncident.roomNumber} is waiting for ownership.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedIncidentId(null)}
-                className="rounded-full border border-[#1F2A37] bg-[#121821] px-3 py-2 text-sm font-semibold text-[#E5E7EB] transition hover:border-[#3B82F6]/35"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-[#1F2A37] bg-[#121821] p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#E5E7EB]">
-                  Room {selectedIncident.roomNumber}
-                </span>
-                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
-                  {selectedIncident.category}
-                </span>
-                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
-                  {selectedIncident.status}
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-[#9CA3AF]">
-                {selectedIncident.description}
-              </p>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                Available staff
-              </p>
-              {staffRoster.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-[#1F2A37] bg-[#121821] p-5 text-sm text-[#9CA3AF]">
-                  No staff roster available.
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
+          <div className="absolute inset-y-0 right-0 w-full max-w-md border-l border-white/[0.06] bg-[#0a0e14] shadow-2xl">
+            <div className="flex h-full flex-col">
+              <div className="flex items-start justify-between gap-4 border-b border-white/[0.04] p-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400/60">
+                    Assignment panel
+                  </p>
+                  <h2 className="mt-1 text-lg font-bold text-white/90">
+                    Assign Responder
+                  </h2>
+                  <p className="mt-1 text-xs text-white/35">
+                    {selectedIncident.category} — Room{" "}
+                    {selectedIncident.roomNumber}
+                  </p>
                 </div>
-              ) : (
-                <StaffList
-                  title="Responder roster"
-                  helperText="Choose the best available staff member for this incident."
-                  items={staffRoster}
-                  emptyMessage="No staff available for assignment."
-                  actionLabel="Assign instantly"
-                  onAction={(staff) => assignIncident(selectedIncident, staff)}
-                />
-              )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedIncidentId(null)}
+                  className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2 text-white/40 transition hover:text-white/70"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-white/60">
+                      Room {selectedIncident.roomNumber}
+                    </span>
+                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-white/40">
+                      {selectedIncident.category}
+                    </span>
+                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-white/40">
+                      {selectedIncident.status}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-white/40">
+                    {selectedIncident.description}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-xs font-bold uppercase tracking-widest text-white/25">
+                    Available Staff
+                  </p>
+                  {staffRoster.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] p-5 text-xs text-white/25">
+                      No staff available.
+                    </div>
+                  ) : (
+                    <StaffList
+                      title="Staff Roster"
+                      helperText="Select a responder for this incident"
+                      items={staffRoster}
+                      emptyMessage="No staff available."
+                      actionLabel="Assign Now"
+                      onAction={(staff) =>
+                        assignIncident(selectedIncident, staff)
+                      }
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -592,17 +712,17 @@ function SummaryRow({
   tone: "red" | "amber" | "emerald";
 }) {
   const toneStyles = {
-    red: "border-red-400/20 bg-red-500/12 text-red-100",
-    amber: "border-amber-400/20 bg-amber-500/12 text-amber-100",
-    emerald: "border-emerald-400/20 bg-emerald-500/12 text-emerald-100",
+    red: "border-red-500/15 bg-red-500/5 text-red-300",
+    amber: "border-amber-500/15 bg-amber-500/5 text-amber-300",
+    emerald: "border-emerald-500/15 bg-emerald-500/5 text-emerald-300",
   }[tone];
 
   return (
     <div
-      className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${toneStyles}`}
+      className={`flex items-center justify-between rounded-xl border px-3.5 py-2.5 ${toneStyles}`}
     >
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-lg font-semibold">{value}</span>
+      <span className="text-xs font-medium">{label}</span>
+      <span className="text-sm font-bold">{value}</span>
     </div>
   );
 }
