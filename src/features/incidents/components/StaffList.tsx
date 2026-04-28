@@ -23,6 +23,7 @@ type StaffListProps = {
   onAction?: (item: StaffListItem) => void;
   actionLabel?: string;
   footer?: ReactNode;
+  theme?: "dark" | "light";
 };
 
 export function StaffList({
@@ -31,28 +32,59 @@ export function StaffList({
   items,
   emptyMessage,
   onAction,
-  actionLabel = "Assign",
+  actionLabel = "Assign Responder",
   footer,
+  theme = "dark",
 }: StaffListProps) {
+  const isLight = theme === "light";
+
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+    <div
+      className={`rounded-2xl border p-5 ${
+        isLight
+          ? "border-slate-200 bg-white/90"
+          : "border-white/[0.06] bg-white/[0.02]"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-white/80">{title}</h3>
+          <h3
+            className={`text-sm font-bold ${
+              isLight ? "text-slate-800" : "text-white/80"
+            }`}
+          >
+            {title}
+          </h3>
           {helperText ? (
-            <p className="mt-1 text-xs leading-5 text-white/35">
+            <p
+              className={`mt-1 text-xs leading-5 ${
+                isLight ? "text-slate-500" : "text-white/35"
+              }`}
+            >
               {helperText}
             </p>
           ) : null}
         </div>
-        <span className="rounded-lg border border-white/[0.06] bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-white/40">
+        <span
+          className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${
+            isLight
+              ? "border-slate-200 bg-slate-50 text-slate-500"
+              : "border-white/[0.06] bg-white/[0.04] text-white/40"
+          }`}
+        >
           {items.length}
         </span>
       </div>
 
       <div className="mt-4 space-y-2">
         {items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] p-4 text-xs text-white/30">
+          <div
+            className={`rounded-xl border border-dashed p-4 text-xs ${
+              isLight
+                ? "border-slate-200 bg-slate-50 text-slate-500"
+                : "border-white/[0.06] bg-white/[0.02] text-white/30"
+            }`}
+          >
             {emptyMessage}
           </div>
         ) : (
@@ -66,11 +98,21 @@ export function StaffList({
             return (
               <div
                 key={item.id}
-                className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 transition hover:border-white/[0.1]"
+                className={`rounded-xl border p-3 transition ${
+                  isLight
+                    ? "border-slate-200 bg-slate-50/70 hover:border-slate-300"
+                    : "border-white/[0.05] bg-white/[0.02] hover:border-white/[0.1]"
+                }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-gradient-to-br from-rose-500/10 to-orange-500/10 text-xs font-bold text-white/70">
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border bg-gradient-to-br text-xs font-bold ${
+                        isLight
+                          ? "border-slate-200 from-rose-100 to-orange-100 text-slate-700"
+                          : "border-white/[0.08] from-rose-500/10 to-orange-500/10 text-white/70"
+                      }`}
+                    >
                       {item.name
                         .split(" ")
                         .slice(0, 2)
@@ -78,10 +120,20 @@ export function StaffList({
                         .join("")}
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5 text-sm font-semibold text-white/80">
+                      <div
+                        className={`flex items-center gap-1.5 text-sm font-semibold ${
+                          isLight ? "text-slate-800" : "text-white/80"
+                        }`}
+                      >
                         {item.name}
                       </div>
-                      <p className="text-[11px] text-white/35">{item.role}</p>
+                      <p
+                        className={`text-[11px] ${
+                          isLight ? "text-slate-500" : "text-white/35"
+                        }`}
+                      >
+                        {item.role}
+                      </p>
                     </div>
                   </div>
 
@@ -99,20 +151,42 @@ export function StaffList({
                   </span>
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-white/30">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.05] bg-white/[0.02] px-2 py-1">
+                <div
+                  className={`mt-2.5 flex flex-wrap items-center gap-2 text-[11px] ${
+                    isLight ? "text-slate-500" : "text-white/30"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${
+                      isLight
+                        ? "border-slate-200 bg-white"
+                        : "border-white/[0.05] bg-white/[0.02]"
+                    }`}
+                  >
                     <Circle className="h-2.5 w-2.5" />
                     {item.phoneNumber}
                   </span>
                   {item.assignedRoom ? (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.05] bg-white/[0.02] px-2 py-1">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${
+                        isLight
+                          ? "border-slate-200 bg-white"
+                          : "border-white/[0.05] bg-white/[0.02]"
+                      }`}
+                    >
                       <MapPin className="h-2.5 w-2.5" />
                       Room {item.assignedRoom}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.05] bg-white/[0.02] px-2 py-1">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${
+                        isLight
+                          ? "border-slate-200 bg-white"
+                          : "border-white/[0.05] bg-white/[0.02]"
+                      }`}
+                    >
                       <CheckCircle2 className="h-2.5 w-2.5" />
-                      Ready
+                      On standby
                     </span>
                   )}
                 </div>
@@ -122,9 +196,17 @@ export function StaffList({
                     type="button"
                     onClick={() => onAction(item)}
                     disabled={!item.isOnline || item.isBusy}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                    className={`mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      isLight
+                        ? "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                        : "border-rose-500/20 bg-rose-500/8 text-rose-300 hover:bg-rose-500/15"
+                    }`}
                   >
-                    <LoaderCircle className="h-3.5 w-3.5" />
+                    {item.isOnline && !item.isBusy ? (
+                      <UserRound className="h-3.5 w-3.5" />
+                    ) : (
+                      <LoaderCircle className="h-3.5 w-3.5" />
+                    )}
                     {actionLabel}
                   </button>
                 ) : null}

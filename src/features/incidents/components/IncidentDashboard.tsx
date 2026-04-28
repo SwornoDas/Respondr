@@ -10,11 +10,13 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   Search,
   Settings,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Sun,
   TriangleAlert,
   Users,
   X,
@@ -61,6 +63,7 @@ export function IncidentDashboard({
     string | null
   >(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [filterStatus, setFilterStatus] = useState<IncidentStatus | "ALL">(
     "ALL",
   );
@@ -74,6 +77,17 @@ export function IncidentDashboard({
 
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("respondr-admin-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("respondr-admin-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const topIncidentId = incidents[0]?.id ?? null;
@@ -286,21 +300,37 @@ export function IncidentDashboard({
     ? formatRelativeTime(latestIncident.createdAt)
     : "No incidents";
 
+  const isLight = theme === "light";
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#080b10] text-white/80">
+    <div
+      className={`flex h-screen overflow-hidden ${
+        isLight ? "bg-slate-100 text-slate-700" : "bg-[#080b10] text-white/80"
+      }`}
+    >
       {/* ── Sidebar ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-white/[0.04] bg-[#0a0e14] transition-transform duration-300 lg:static lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r transition-transform duration-300 lg:static lg:translate-x-0 ${
+          isLight
+            ? "border-slate-200 bg-white"
+            : "border-white/[0.04] bg-[#0a0e14]"
+        } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-white/[0.04] px-5 py-5">
+        <div
+          className={`flex items-center gap-3 border-b px-5 py-5 ${
+            isLight ? "border-slate-200" : "border-white/[0.04]"
+          }`}
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-lg shadow-rose-500/20">
             <ShieldAlert className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-white">
+            <h1
+              className={`text-sm font-bold tracking-tight ${
+                isLight ? "text-slate-900" : "text-white"
+              }`}
+            >
               Respondr
             </h1>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-400/60">
@@ -309,7 +339,11 @@ export function IncidentDashboard({
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="ml-auto rounded-lg p-1.5 text-white/30 hover:bg-white/5 lg:hidden"
+            className={`ml-auto rounded-lg p-1.5 lg:hidden ${
+              isLight
+                ? "text-slate-500 hover:bg-slate-100"
+                : "text-white/30 hover:bg-white/5"
+            }`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -322,8 +356,12 @@ export function IncidentDashboard({
               key={item.label}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                 item.active
-                  ? "bg-gradient-to-r from-rose-500/10 to-orange-500/5 text-white border border-rose-500/15"
-                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
+                  ? isLight
+                    ? "border border-rose-200 bg-gradient-to-r from-rose-100 to-orange-50 text-slate-900"
+                    : "bg-gradient-to-r from-rose-500/10 to-orange-500/5 text-white border border-rose-500/15"
+                  : isLight
+                    ? "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
               }`}
             >
               <item.icon className="h-4 w-4" />
@@ -333,16 +371,30 @@ export function IncidentDashboard({
         </nav>
 
         {/* Sidebar footer */}
-        <div className="border-t border-white/[0.04] p-4">
+        <div
+          className={`border-t p-4 ${
+            isLight ? "border-slate-200" : "border-white/[0.04]"
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500/15 to-orange-500/15 text-xs font-bold text-rose-300">
               OH
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white/70 truncate">
+              <p
+                className={`truncate text-xs font-semibold ${
+                  isLight ? "text-slate-700" : "text-white/70"
+                }`}
+              >
                 Olivia Hart
               </p>
-              <p className="text-[10px] text-white/30">Administrator</p>
+              <p
+                className={`text-[10px] ${
+                  isLight ? "text-slate-500" : "text-white/30"
+                }`}
+              >
+                Administrator
+              </p>
             </div>
             <button
               type="button"
@@ -350,7 +402,11 @@ export function IncidentDashboard({
                 await supabase.auth.signOut();
                 window.location.href = "/login";
               }}
-              className="rounded-lg p-2 text-white/25 transition hover:bg-white/5 hover:text-rose-400"
+              className={`rounded-lg p-2 transition hover:text-rose-400 ${
+                isLight
+                  ? "text-slate-500 hover:bg-slate-100"
+                  : "text-white/25 hover:bg-white/5"
+              }`}
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
@@ -362,7 +418,9 @@ export function IncidentDashboard({
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className={`fixed inset-0 z-40 backdrop-blur-sm lg:hidden ${
+            isLight ? "bg-slate-900/25" : "bg-black/60"
+          }`}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -370,25 +428,63 @@ export function IncidentDashboard({
       {/* ── Main Content ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center gap-4 border-b border-white/[0.04] bg-[#0a0e14]/80 px-4 py-3 backdrop-blur-xl lg:px-6">
+        <header
+          className={`flex items-center gap-4 border-b px-4 py-3 backdrop-blur-xl lg:px-6 ${
+            isLight
+              ? "border-slate-200 bg-white/85"
+              : "border-white/[0.04] bg-[#0a0e14]/80"
+          }`}
+        >
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-white/40 hover:bg-white/5 lg:hidden"
+            className={`rounded-lg p-2 lg:hidden ${
+              isLight
+                ? "text-slate-500 hover:bg-slate-100"
+                : "text-white/40 hover:bg-white/5"
+            }`}
           >
             <Menu className="h-5 w-5" />
           </button>
 
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+            <Search
+              className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+                isLight ? "text-slate-400" : "text-white/20"
+              }`}
+            />
             <input
               type="text"
-              placeholder="Search incidents, rooms, staff..."
-              className="w-full rounded-xl border border-white/[0.06] bg-white/[0.03] py-2 pl-9 pr-4 text-sm text-white/70 outline-none transition placeholder:text-white/20 focus:border-rose-500/25 focus:bg-white/[0.05]"
+              placeholder="Search incidents, rooms, or staff..."
+              className={`w-full rounded-xl border py-2 pl-9 pr-4 text-sm outline-none transition focus:border-rose-500/25 ${
+                isLight
+                  ? "border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400 focus:bg-white"
+                  : "border-white/[0.06] bg-white/[0.03] text-white/70 placeholder:text-white/20 focus:bg-white/[0.05]"
+              }`}
             />
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                setTheme((current) => (current === "dark" ? "light" : "dark"))
+              }
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition ${
+                isLight
+                  ? "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                  : "border-white/[0.08] bg-white/[0.03] text-white/65 hover:text-white"
+              }`}
+              title="Toggle theme"
+            >
+              {isLight ? (
+                <Moon className="h-3.5 w-3.5" />
+              ) : (
+                <Sun className="h-3.5 w-3.5" />
+              )}
+              {isLight ? "Dark" : "Light"}
+            </button>
+
             {/* Connection badge */}
             <span
               className={`hidden sm:inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold ${
@@ -404,11 +500,17 @@ export function IncidentDashboard({
                     : "bg-amber-400 animate-pulse"
                 }`}
               />
-              {connectionState === "connected" ? "Live" : "Connecting"}
+              {connectionState === "connected" ? "Connected" : "Reconnecting"}
             </span>
 
             {/* Time */}
-            <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/40">
+            <div
+              className={`hidden sm:flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
+                isLight
+                  ? "border-slate-200 bg-slate-50 text-slate-500"
+                  : "border-white/[0.06] bg-white/[0.03] text-white/40"
+              }`}
+            >
               <Clock3 className="h-3 w-3" />
               {currentTime.toLocaleTimeString([], {
                 hour: "2-digit",
@@ -429,7 +531,11 @@ export function IncidentDashboard({
                   await Notification.requestPermission();
                 }
               }}
-              className="relative rounded-lg border border-white/[0.06] bg-white/[0.03] p-2 text-white/40 transition hover:text-rose-400"
+              className={`relative rounded-lg border p-2 transition hover:text-rose-400 ${
+                isLight
+                  ? "border-slate-200 bg-slate-50 text-slate-500"
+                  : "border-white/[0.06] bg-white/[0.03] text-white/40"
+              }`}
             >
               <BellRing className="h-4 w-4" />
               {reportedCount > 0 && (
@@ -446,19 +552,39 @@ export function IncidentDashboard({
           {/* Page title */}
           <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-white/90">
+              <h2
+                className={`text-xl font-bold tracking-tight ${
+                  isLight ? "text-slate-900" : "text-white/90"
+                }`}
+              >
                 Incident Command Center
               </h2>
-              <p className="mt-0.5 text-xs text-white/35">
-                Real-time emergency coordination for your property
+              <p
+                className={`mt-0.5 text-xs ${
+                  isLight ? "text-slate-500" : "text-white/35"
+                }`}
+              >
+                Live emergency coordination for your property team
               </p>
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-xs text-white/35">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs ${
+                  isLight
+                    ? "border-slate-200 bg-white text-slate-500"
+                    : "border-white/[0.06] bg-white/[0.03] text-white/35"
+                }`}
+              >
                 <Building2 className="h-3 w-3" />
                 Property HQ
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-xs text-white/35">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs ${
+                  isLight
+                    ? "border-slate-200 bg-white text-slate-500"
+                    : "border-white/[0.06] bg-white/[0.03] text-white/35"
+                }`}
+              >
                 <Sparkles className="h-3 w-3 text-rose-400/60" />
                 {latestElapsed}
               </span>
@@ -473,27 +599,31 @@ export function IncidentDashboard({
               helper="Open incidents requiring attention"
               icon={BellRing}
               tone="rose"
+              theme={theme}
             />
             <StatsCard
               title="Avg Response"
               value={`${avgResponseMinutes}m`}
-              helper="Average response time active"
+              helper="Average time since active incidents were reported"
               icon={Clock3}
               tone="amber"
+              theme={theme}
             />
             <StatsCard
               title="Resolved Today"
               value={String(resolvedToday)}
-              helper="Successfully resolved incidents"
+              helper="Incidents closed during this session"
               icon={ShieldCheck}
               tone="emerald"
+              theme={theme}
             />
             <StatsCard
               title="Staff Online"
               value={String(staffRoster.filter((s) => s.isOnline).length)}
-              helper="Available responders on duty"
+              helper="Responders currently online"
               icon={Users}
               tone="violet"
+              theme={theme}
             />
           </div>
 
@@ -510,12 +640,18 @@ export function IncidentDashboard({
             <section className="space-y-4">
               {/* Filter tabs */}
               <div className="flex items-center justify-between">
-                <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                <div
+                  className={`flex gap-1 rounded-xl border p-1 ${
+                    isLight
+                      ? "border-slate-200 bg-white"
+                      : "border-white/[0.06] bg-white/[0.02]"
+                  }`}
+                >
                   {(
                     [
                       { key: "ALL", label: "All" },
                       { key: "REPORTED", label: "Reported" },
-                      { key: "IN_PROGRESS", label: "Active" },
+                      { key: "IN_PROGRESS", label: "In Progress" },
                       { key: "RESOLVED", label: "Resolved" },
                     ] as const
                   ).map((tab) => (
@@ -525,7 +661,9 @@ export function IncidentDashboard({
                       className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                         filterStatus === tab.key
                           ? "bg-rose-500/12 text-rose-300 border border-rose-500/20"
-                          : "text-white/30 hover:text-white/50 border border-transparent"
+                          : isLight
+                            ? "border border-transparent text-slate-500 hover:text-slate-700"
+                            : "text-white/30 hover:text-white/50 border border-transparent"
                       }`}
                     >
                       {tab.label}
@@ -537,16 +675,24 @@ export function IncidentDashboard({
                     </button>
                   ))}
                 </div>
-                <span className="text-[11px] text-white/25">
+                <span
+                  className={`text-[11px] ${isLight ? "text-slate-500" : "text-white/25"}`}
+                >
                   {filteredIncidents.length} incident
-                  {filteredIncidents.length !== 1 ? "s" : ""}
+                  {filteredIncidents.length !== 1 ? "s" : ""} shown
                 </span>
               </div>
 
               {/* Incident list */}
               <div className="space-y-3">
                 {filteredIncidents.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/[0.06] bg-white/[0.02] p-10 text-center text-sm text-white/25">
+                  <div
+                    className={`rounded-2xl border border-dashed p-10 text-center text-sm ${
+                      isLight
+                        ? "border-slate-200 bg-slate-50 text-slate-500"
+                        : "border-white/[0.06] bg-white/[0.02] text-white/25"
+                    }`}
+                  >
                     No incidents match this filter.
                   </div>
                 ) : (
@@ -561,6 +707,7 @@ export function IncidentDashboard({
                       }
                       highlighted={highlightedIncidentId === incident.id}
                       pending={pendingId === incident.id}
+                      theme={theme}
                       onAssign={(selectedIncident) =>
                         setSelectedIncidentId(selectedIncident.id)
                       }
@@ -579,8 +726,18 @@ export function IncidentDashboard({
             {/* Right sidebar panels */}
             <aside className="space-y-4">
               {/* Situation summary */}
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">
+              <div
+                className={`rounded-2xl border p-5 ${
+                  isLight
+                    ? "border-slate-200 bg-white/90"
+                    : "border-white/[0.06] bg-white/[0.02]"
+                }`}
+              >
+                <h3
+                  className={`text-xs font-bold uppercase tracking-widest ${
+                    isLight ? "text-slate-500" : "text-white/30"
+                  }`}
+                >
                   Situation Overview
                 </h3>
                 <div className="mt-4 space-y-2">
@@ -588,21 +745,32 @@ export function IncidentDashboard({
                     label="Reported"
                     value={reportedCount}
                     tone="red"
+                    theme={theme}
                   />
                   <SummaryRow
                     label="In Progress"
                     value={inProgressCount}
                     tone="amber"
+                    theme={theme}
                   />
                   <SummaryRow
                     label="Resolved"
                     value={resolvedToday}
                     tone="emerald"
+                    theme={theme}
                   />
                 </div>
-                <div className="mt-4 rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 text-xs text-white/35">
+                <div
+                  className={`mt-4 rounded-xl border p-3 text-xs ${
+                    isLight
+                      ? "border-slate-200 bg-slate-50 text-slate-500"
+                      : "border-white/[0.05] bg-white/[0.02] text-white/35"
+                  }`}
+                >
                   Latest:{" "}
-                  <span className="text-white/60">
+                  <span
+                    className={isLight ? "text-slate-700" : "text-white/60"}
+                  >
                     {latestIncident
                       ? `${latestIncident.category} / Room ${latestIncident.roomNumber}`
                       : "None"}
@@ -616,8 +784,13 @@ export function IncidentDashboard({
                 helperText="Staff handling incidents"
                 items={activeResponderItems}
                 emptyMessage="No responders assigned."
+                theme={theme}
                 footer={
-                  <p className="text-[10px] leading-4 text-white/20">
+                  <p
+                    className={`text-[10px] leading-4 ${
+                      isLight ? "text-slate-500" : "text-white/20"
+                    }`}
+                  >
                     Auto-updates when incidents are assigned or resolved.
                   </p>
                 }
@@ -629,18 +802,40 @@ export function IncidentDashboard({
 
       {/* ── Assignment Panel (slide-over) ── */}
       {selectedIncident ? (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
-          <div className="absolute inset-y-0 right-0 w-full max-w-md border-l border-white/[0.06] bg-[#0a0e14] shadow-2xl">
+        <div
+          className={`fixed inset-0 z-50 backdrop-blur-sm ${
+            isLight ? "bg-slate-900/30" : "bg-black/60"
+          }`}
+        >
+          <div
+            className={`absolute inset-y-0 right-0 w-full max-w-md border-l shadow-2xl ${
+              isLight
+                ? "border-slate-200 bg-white"
+                : "border-white/[0.06] bg-[#0a0e14]"
+            }`}
+          >
             <div className="flex h-full flex-col">
-              <div className="flex items-start justify-between gap-4 border-b border-white/[0.04] p-5">
+              <div
+                className={`flex items-start justify-between gap-4 border-b p-5 ${
+                  isLight ? "border-slate-200" : "border-white/[0.04]"
+                }`}
+              >
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400/60">
                     Assignment panel
                   </p>
-                  <h2 className="mt-1 text-lg font-bold text-white/90">
+                  <h2
+                    className={`mt-1 text-lg font-bold ${
+                      isLight ? "text-slate-900" : "text-white/90"
+                    }`}
+                  >
                     Assign Responder
                   </h2>
-                  <p className="mt-1 text-xs text-white/35">
+                  <p
+                    className={`mt-1 text-xs ${
+                      isLight ? "text-slate-500" : "text-white/35"
+                    }`}
+                  >
                     {selectedIncident.category} — Room{" "}
                     {selectedIncident.roomNumber}
                   </p>
@@ -648,45 +843,88 @@ export function IncidentDashboard({
                 <button
                   type="button"
                   onClick={() => setSelectedIncidentId(null)}
-                  className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2 text-white/40 transition hover:text-white/70"
+                  className={`rounded-lg border p-2 transition ${
+                    isLight
+                      ? "border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-700"
+                      : "border-white/[0.06] bg-white/[0.03] text-white/40 hover:text-white/70"
+                  }`}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                <div
+                  className={`rounded-xl border p-4 ${
+                    isLight
+                      ? "border-slate-200 bg-slate-50"
+                      : "border-white/[0.06] bg-white/[0.03]"
+                  }`}
+                >
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-white/60">
+                    <span
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+                        isLight
+                          ? "border-slate-200 bg-white text-slate-700"
+                          : "border-white/[0.06] bg-white/[0.03] text-white/60"
+                      }`}
+                    >
                       Room {selectedIncident.roomNumber}
                     </span>
-                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-white/40">
+                    <span
+                      className={`rounded-lg border px-2.5 py-1 text-xs ${
+                        isLight
+                          ? "border-slate-200 bg-white text-slate-500"
+                          : "border-white/[0.06] bg-white/[0.03] text-white/40"
+                      }`}
+                    >
                       {selectedIncident.category}
                     </span>
-                    <span className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1 text-xs text-white/40">
+                    <span
+                      className={`rounded-lg border px-2.5 py-1 text-xs ${
+                        isLight
+                          ? "border-slate-200 bg-white text-slate-500"
+                          : "border-white/[0.06] bg-white/[0.03] text-white/40"
+                      }`}
+                    >
                       {selectedIncident.status}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed text-white/40">
+                  <p
+                    className={`mt-3 text-sm leading-relaxed ${
+                      isLight ? "text-slate-600" : "text-white/40"
+                    }`}
+                  >
                     {selectedIncident.description}
                   </p>
                 </div>
 
                 <div>
-                  <p className="mb-3 text-xs font-bold uppercase tracking-widest text-white/25">
-                    Available Staff
+                  <p
+                    className={`mb-3 text-xs font-bold uppercase tracking-widest ${
+                      isLight ? "text-slate-500" : "text-white/25"
+                    }`}
+                  >
+                    Available Responders
                   </p>
                   {staffRoster.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] p-5 text-xs text-white/25">
+                    <div
+                      className={`rounded-xl border border-dashed p-5 text-xs ${
+                        isLight
+                          ? "border-slate-200 bg-slate-50 text-slate-500"
+                          : "border-white/[0.06] bg-white/[0.02] text-white/25"
+                      }`}
+                    >
                       No staff available.
                     </div>
                   ) : (
                     <StaffList
                       title="Staff Roster"
-                      helperText="Select a responder for this incident"
+                      helperText="Choose the best responder for this incident"
                       items={staffRoster}
                       emptyMessage="No staff available."
-                      actionLabel="Assign Now"
+                      actionLabel="Assign Responder"
+                      theme={theme}
                       onAction={(staff) =>
                         assignIncident(selectedIncident, staff)
                       }
@@ -706,16 +944,25 @@ function SummaryRow({
   label,
   value,
   tone,
+  theme,
 }: {
   label: string;
   value: number;
   tone: "red" | "amber" | "emerald";
+  theme: "dark" | "light";
 }) {
-  const toneStyles = {
-    red: "border-red-500/15 bg-red-500/5 text-red-300",
-    amber: "border-amber-500/15 bg-amber-500/5 text-amber-300",
-    emerald: "border-emerald-500/15 bg-emerald-500/5 text-emerald-300",
-  }[tone];
+  const toneStyles =
+    theme === "light"
+      ? {
+          red: "border-red-200 bg-red-50 text-red-700",
+          amber: "border-amber-200 bg-amber-50 text-amber-700",
+          emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        }[tone]
+      : {
+          red: "border-red-500/15 bg-red-500/5 text-red-300",
+          amber: "border-amber-500/15 bg-amber-500/5 text-amber-300",
+          emerald: "border-emerald-500/15 bg-emerald-500/5 text-emerald-300",
+        }[tone];
 
   return (
     <div
