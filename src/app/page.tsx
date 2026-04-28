@@ -136,15 +136,14 @@ export default function Home() {
           </div>
           <div className="relative lg:h-[600px] flex items-center justify-center">
             <div className="absolute inset-0 bg-accent/5 rounded-full blur-3xl animate-pulse" />
-            <div className="relative animate-float">
+            <div className="relative w-full max-w-[500px] aspect-[5/6] animate-float">
               <Image
                 src="/hero.png"
                 alt="Emergency Response Platform"
-                width={500}
-                height={600}
-                className="rounded-[40px] shadow-2xl"
+                fill
+                sizes="(max-width: 1024px) 100vw, 500px"
+                className="rounded-[40px] shadow-2xl object-cover"
                 priority
-                style={{ width: "100%", height: "auto", maxWidth: "500px" }}
               />
             </div>
           </div>
