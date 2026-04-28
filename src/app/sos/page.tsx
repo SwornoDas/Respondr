@@ -1,4 +1,4 @@
-import { GuestSosForm } from "@/features/incidents/components/guest-sos-form";
+import { SosForm } from "@/features/incidents/components/SosForm";
 
 export default function SosPage() {
   return (
@@ -15,7 +15,7 @@ export default function SosPage() {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]" />
 
       <div className="relative z-10 w-full max-w-4xl mx-auto px-6 py-12">
-        <GuestSosForm />
+        <SosForm />
       </div>
 
       {/* Footer Hint */}

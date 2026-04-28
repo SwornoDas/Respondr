@@ -23,11 +23,11 @@ import {
 import { useIncidentStream } from "../hooks/use-incident-stream";
 import type { IncidentRecord, IncidentStatus, StaffMember } from "../types";
 import { formatRelativeTime, mergeIncident } from "../utils";
-import { IncidentCard } from "./incident-card";
-import { StaffList, type StaffListItem } from "./staff-list";
-import { StatsCard } from "./stats-card";
+import { IncidentCard } from "./IncidentCard";
+import { StaffList, type StaffListItem } from "./StaffList";
+import { StatsCard } from "./StatsCard";
 
-type AdminDashboardProps = {
+type IncidentDashboardProps = {
   initialIncidents: IncidentRecord[];
   initialStaff: StaffMember[];
 };
@@ -45,10 +45,10 @@ const sidebarNav = [
   { icon: Settings, label: "Settings", active: false },
 ];
 
-export function AdminDashboard({
+export function IncidentDashboard({
   initialIncidents,
   initialStaff,
-}: AdminDashboardProps) {
+}: IncidentDashboardProps) {
   const { incidents, setIncidents, connectionState, emitIncidentEvent } =
     useIncidentStream(initialIncidents);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(

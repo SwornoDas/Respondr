@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { AdminDashboard } from "@/features/incidents/components/admin-dashboard";
+import { IncidentDashboard } from "@/features/incidents/components/IncidentDashboard";
 import { seedIncidents, seedStaff } from "@/features/incidents/mock-data";
 import {
   listIncidents,
@@ -16,7 +16,7 @@ export default async function AdminPage() {
   const initialStaff = onlineStaff.length > 0 ? onlineStaff : seedStaff;
 
   return (
-    <AdminDashboard
+    <IncidentDashboard
       initialIncidents={initialIncidents}
       initialStaff={initialStaff}
     />

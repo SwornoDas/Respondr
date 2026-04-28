@@ -40,7 +40,7 @@ const categories = [
   },
 ];
 
-export function GuestSosForm() {
+export function SosForm() {
   const [step, setStep] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<IncidentCategory | null>(null);
   const [roomNumber, setRoomNumber] = useState("");
