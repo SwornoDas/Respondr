@@ -12,18 +12,20 @@ export default function OperationsLayout({
   const links = experienceLinks.filter((item) => item.href !== "/");
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-[rgba(11,29,38,0.78)] backdrop-blur-xl">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(225,29,72,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#eef5f8_100%)]">
+      <header className="sticky top-0 z-20 border-b border-slate-900/10 bg-[rgba(248,250,252,0.84)] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-8 lg:px-12">
-          <Link href="/" className="flex items-center gap-3 text-white">
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-2">
+          <Link href="/" className="flex items-center gap-3 text-slate-900">
+            <div className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-500 to-orange-500 p-2 text-white shadow-[0_12px_30px_rgba(225,29,72,0.18)]">
               <BellRing className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-sm uppercase tracking-[0.22em] text-white/60">
+              <div className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600">
                 Respondr
               </div>
-              <div className="text-base font-semibold">Emergency operations</div>
+              <div className="text-base font-semibold text-slate-900">
+                Emergency operations
+              </div>
             </div>
           </Link>
 
@@ -32,7 +34,7 @@ export default function OperationsLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-full border border-white/15 bg-white/6 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/12 hover:text-white"
+                className="rounded-full border border-slate-900/10 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
               >
                 {item.label}
               </Link>

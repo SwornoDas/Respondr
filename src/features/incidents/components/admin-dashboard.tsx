@@ -184,7 +184,8 @@ export function AdminDashboard({
         eyebrow="Admin Command"
         title="Coordinate every active incident from one place"
         description="A focused operations console for triage, acknowledgement, and resolution. The layout keeps the critical queue visible first, then moves into the individual incident worklist."
-        className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(9,23,30,0.98),rgba(13,34,44,0.95))] text-white shadow-[0_28px_90px_rgba(2,6,23,0.22)]"
+        tone="dark"
+        className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(9,23,30,0.98),rgba(13,34,44,0.95))] text-white shadow-[0_28px_90px_rgba(2,6,23,0.22)] border-white/10"
       >
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -right-24 top-0 h-56 w-56 rounded-full bg-rose-500/20 blur-3xl" />
@@ -319,7 +320,8 @@ export function AdminDashboard({
         eyebrow="Response Queue"
         title="Incident feed"
         description="Search across room numbers, incident types, and descriptions while the socket hook stays ready for live events."
-        className="bg-[rgba(11,29,38,0.94)] text-white shadow-[0_24px_80px_rgba(2,6,23,0.18)]"
+        tone="dark"
+        className="bg-[linear-gradient(180deg,rgba(11,29,38,0.98),rgba(7,18,25,0.98))] text-white shadow-[0_24px_80px_rgba(2,6,23,0.18)] border-white/10"
       >
         <div className="grid gap-4 rounded-[24px] border border-white/10 bg-white/6 p-4 md:grid-cols-[1.25fr_auto] md:items-center">
           <label className="relative block">
@@ -359,17 +361,17 @@ export function AdminDashboard({
 
         <div className="mt-6 grid gap-4">
           {filteredIncidents.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-6 text-sm text-white/62">
+            <div className="rounded-2xl border border-white/10 bg-white/6 p-8 text-sm text-white/62">
               No incidents match the current filters.
             </div>
           ) : (
             filteredIncidents.map((incident) => (
               <article
                 key={incident.id}
-                className="rounded-[28px] border border-white/10 bg-white/7 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.18)] transition hover:border-white/18 hover:bg-white/8"
+                className="rounded-[28px] border border-white/10 bg-white/[0.08] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.18)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.11]"
               >
-                <div className="grid gap-4 md:grid-cols-[1.3fr_0.7fr] md:items-start">
-                  <div>
+                <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+                  <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(incident.status)}`}
@@ -385,26 +387,66 @@ export function AdminDashboard({
                         #{incident.id}
                       </span>
                     </div>
-                    <h2 className="mt-4 text-2xl font-semibold tracking-tight text-white md:text-[1.7rem]">
+                    <h2 className="text-2xl font-semibold tracking-tight text-white md:text-[1.75rem]">
                       {incident.category} in {incident.roomNumber}
                     </h2>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
+                    <p className="max-w-2xl text-sm leading-6 text-white/72">
                       {incident.description || "No description provided."}
                     </p>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <InfoPill
+                        label="Status"
+                        value={formatIncidentStatus(incident.status)}
+                      />
+                      <InfoPill label="Priority" value={incident.priority} />
+                      <InfoPill
+                        label="Reported"
+                        value={formatRelativeTime(incident.createdAt)}
+                      />
+                    </div>
                   </div>
 
-                  <div className="rounded-[22px] border border-white/10 bg-slate-950/35 p-4 text-sm text-white/72 md:text-right">
-                    <div className="text-white/45">Reported</div>
-                    <div className="mt-1 text-base font-semibold text-white">
-                      {formatRelativeTime(incident.createdAt)}
+                  <div className="rounded-[24px] border border-white/10 bg-slate-950/35 p-4 lg:ml-auto lg:w-full xl:max-w-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
+                          Incident snapshot
+                        </div>
+                        <div className="mt-2 text-lg font-semibold text-white">
+                          Room {incident.roomNumber}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-right text-xs text-white/60">
+                        <div>Reported</div>
+                        <div className="mt-1 text-sm font-semibold text-white">
+                          {formatRelativeTime(incident.createdAt)}
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-3 text-white/55">
-                      Incident {incident.id}
+
+                    <div className="mt-4 grid gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
+                        <div className="text-xs uppercase tracking-[0.2em] text-white/40">
+                          Incident ID
+                        </div>
+                        <div className="mt-2 break-all text-sm font-medium text-white/80">
+                          {incident.id}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
+                        <div className="text-xs uppercase tracking-[0.2em] text-white/40">
+                          Description
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-white/70">
+                          {incident.description || "No description provided."}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-3 border-t border-white/10 pt-5">
                   {incident.status === "REPORTED" ? (
                     <ActionButton
                       label="Acknowledge"
@@ -484,6 +526,17 @@ function SummaryChip({
   );
 }
 
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
+      <div className="text-xs uppercase tracking-[0.2em] text-white/40">
+        {label}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-white/80">{value}</div>
+    </div>
+  );
+}
+
 function ActionButton({
   label,
   onClick,
@@ -498,7 +551,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white/86 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {label}
     </button>
