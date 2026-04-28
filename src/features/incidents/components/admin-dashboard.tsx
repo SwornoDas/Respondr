@@ -75,7 +75,7 @@ export function AdminDashboard({
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
-            new Notification("CrisisSync alert", {
+            new Notification("Respondr alert", {
               body: `${latestIncident.category} in room ${latestIncident.roomNumber}`,
               tag: latestIncident.id,
             });
@@ -277,7 +277,7 @@ export function AdminDashboard({
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                    CrisisSync
+                    Respondr
                   </h1>
                   <span
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
