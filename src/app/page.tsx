@@ -52,7 +52,7 @@ export default function Home() {
             width={32}
             height={32}
             className="rounded-lg"
-            style={{ height: "auto" }}
+            style={{ width: "auto", height: "auto" }}
           />
           <span className="text-xl font-bold tracking-tight text-ink-strong">
             Respondr
@@ -142,9 +142,9 @@ export default function Home() {
                 alt="Emergency Response Platform"
                 width={500}
                 height={600}
-                className="rounded-[40px] shadow-2xl w-full max-w-[500px]"
+                className="rounded-[40px] shadow-2xl"
                 priority
-                style={{ height: "auto" }}
+                style={{ width: "100%", height: "auto", maxWidth: "500px" }}
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function Home() {
               alt="Respondr" 
               width={24} 
               height={24} 
-              style={{ height: "auto" }}
+              style={{ width: "auto", height: "auto" }}
             />
             <span className="font-bold">Respondr</span>
             <span className="text-xs ml-2">© 2026 Hospitality Safety Inc.</span>
