@@ -50,6 +50,40 @@ export function GuestSosForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [reportedIncident, setReportedIncident] = useState<IncidentRecord | null>(null);
 
+  /**
+   * Smart location formatter:
+   * 1. Capitalizes the first letter of every word
+   * 2. Auto-inserts a space when letters transition to digits (e.g. "room556" → "Room 556")
+   */
+  function formatLocationInput(raw: string): string {
+    // Step 1: Insert space at every letter→digit boundary (e.g. "room556" → "room 556")
+    let formatted = raw.replace(/([a-zA-Z])(\d)/g, "$1 $2");
+
+    // Step 2: Capitalize the first letter of every word
+    formatted = formatted.replace(/\b([a-zA-Z])/g, (match) => match.toUpperCase());
+
+    return formatted;
+  }
+
+  function handleRoomChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const rawValue = input.value;
+    const cursorPos = input.selectionStart ?? rawValue.length;
+
+    const formatted = formatLocationInput(rawValue);
+
+    // Adjust cursor: formatting may have added extra characters (spaces)
+    const lengthDiff = formatted.length - rawValue.length;
+    const newCursorPos = cursorPos + lengthDiff;
+
+    setRoomNumber(formatted);
+
+    // Restore cursor position after React re-render
+    requestAnimationFrame(() => {
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }
+
   // Auto-focus room input on step 2
   useEffect(() => {
     if (step === 2) {
@@ -209,7 +243,7 @@ export function GuestSosForm() {
                 id="room-input"
                 type="text"
                 value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}
+                onChange={handleRoomChange}
                 placeholder="Room 304, Lobby, Pool..."
                 className="w-full bg-white/5 border-2 border-white/10 rounded-[28px] py-6 pl-16 pr-6 text-2xl text-white outline-none focus:border-accent transition-all placeholder:text-white/20"
               />

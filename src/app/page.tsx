@@ -52,6 +52,7 @@ export default function Home() {
             width={32}
             height={32}
             className="rounded-lg"
+            style={{ height: "auto" }}
           />
           <span className="text-xl font-bold tracking-tight text-ink-strong">
             Respondr
@@ -141,8 +142,9 @@ export default function Home() {
                 alt="Emergency Response Platform"
                 width={500}
                 height={600}
-                className="rounded-[40px] shadow-2xl"
+                className="rounded-[40px] shadow-2xl w-full max-w-[500px]"
                 priority
+                style={{ height: "auto" }}
               />
             </div>
           </div>
@@ -230,7 +232,13 @@ export default function Home() {
       <footer className="py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-2 opacity-50">
-            <Image src="/logo.png" alt="Respondr" width={24} height={24} />
+            <Image 
+              src="/logo.png" 
+              alt="Respondr" 
+              width={24} 
+              height={24} 
+              style={{ height: "auto" }}
+            />
             <span className="font-bold">Respondr</span>
             <span className="text-xs ml-2">© 2026 Hospitality Safety Inc.</span>
           </div>
