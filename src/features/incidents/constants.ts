@@ -1,4 +1,8 @@
-import type { IncidentCategory, IncidentPriority, IncidentStatus } from "./types";
+import type {
+  IncidentCategory,
+  IncidentPriority,
+  IncidentStatus,
+} from "./types";
 
 export const categoryCopy: Record<
   IncidentCategory,
@@ -6,15 +10,18 @@ export const categoryCopy: Record<
 > = {
   Medical: {
     headline: "Medical assistance",
-    supporting: "Route urgent injuries, illness, and wellness escalations immediately.",
+    supporting:
+      "Route urgent injuries, illness, and wellness escalations immediately.",
   },
   Fire: {
     headline: "Fire or smoke",
-    supporting: "Trigger the fastest possible path to responders and command staff.",
+    supporting:
+      "Trigger the fastest possible path to responders and command staff.",
   },
   Security: {
     headline: "Security threat",
-    supporting: "Coordinate security, guest communication, and management visibility.",
+    supporting:
+      "Coordinate security, guest communication, and management visibility.",
   },
 };
 
@@ -46,14 +53,14 @@ export const escalationTimeline = [
 ];
 
 export const statusStyles: Record<IncidentStatus, string> = {
-  REPORTED: "bg-amber-100 text-amber-800 border border-amber-200",
-  ACKNOWLEDGED: "bg-sky-100 text-sky-800 border border-sky-200",
-  IN_PROGRESS: "bg-violet-100 text-violet-800 border border-violet-200",
-  RESOLVED: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+  REPORTED: "border border-red-400/30 bg-red-500/15 text-red-100",
+  ACKNOWLEDGED: "border border-sky-400/25 bg-sky-500/15 text-sky-100",
+  IN_PROGRESS: "border border-amber-400/25 bg-amber-500/15 text-amber-100",
+  RESOLVED: "border border-emerald-400/25 bg-emerald-500/15 text-emerald-100",
 };
 
 export const priorityStyles: Record<IncidentPriority, string> = {
-  Critical: "bg-rose-100 text-rose-800 border border-rose-200",
-  High: "bg-orange-100 text-orange-800 border border-orange-200",
-  Moderate: "bg-slate-100 text-slate-700 border border-slate-200",
+  Critical: "border border-slate-500/40 bg-slate-800/70 text-slate-100",
+  High: "border border-amber-400/25 bg-amber-500/12 text-amber-100",
+  Moderate: "border border-slate-500/25 bg-slate-800/45 text-slate-200",
 };

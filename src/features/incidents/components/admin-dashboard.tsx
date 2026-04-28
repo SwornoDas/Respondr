@@ -1,132 +1,160 @@
 "use client";
 
-import {
-  useEffect,
-  startTransition,
-  useDeferredValue,
-  useState,
-  type ComponentType,
-} from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   BellRing,
   Clock3,
-  Search,
+  LogOut,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 
-import { SectionCard } from "@/components/section-card";
-
 import { useIncidentStream } from "../hooks/use-incident-stream";
-import type { IncidentRecord, IncidentStatus } from "../types";
-import {
-  formatIncidentStatus,
-  formatRelativeTime,
-  getPriorityClasses,
-  getStatusClasses,
-  mergeIncident,
-} from "../utils";
+import type { IncidentRecord, IncidentStatus, StaffMember } from "../types";
+import { formatRelativeTime, mergeIncident } from "../utils";
+import { IncidentCard } from "./incident-card";
+import { StaffList, type StaffListItem } from "./staff-list";
+import { StatsCard } from "./stats-card";
 
-const statusFilterOptions = [
-  "ALL",
-  "REPORTED",
-  "ACKNOWLEDGED",
-  "IN_PROGRESS",
-  "RESOLVED",
-] as const;
+type AdminDashboardProps = {
+  initialIncidents: IncidentRecord[];
+  initialStaff: StaffMember[];
+};
+
+const socketEvents = {
+  assignment: "incident_assigned",
+  status: "status_updated",
+} as const;
 
 export function AdminDashboard({
   initialIncidents,
-}: {
-  initialIncidents: IncidentRecord[];
-}) {
-  const { incidents, setIncidents } = useIncidentStream(initialIncidents);
-  const [statusFilter, setStatusFilter] =
-    useState<(typeof statusFilterOptions)[number]>("ALL");
-  const [search, setSearch] = useState("");
+  initialStaff,
+}: AdminDashboardProps) {
+  const { incidents, setIncidents, connectionState, emitIncidentEvent } =
+    useIncidentStream(initialIncidents);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null,
+  );
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [highlightedIncidentId, setHighlightedIncidentId] = useState<
+    string | null
+  >(null);
+  const previousTopIncidentId = useRef<string | null>(null);
+  const alertTimeoutRef = useRef<number | null>(null);
 
-  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
-
-  // Audio alert logic
   useEffect(() => {
-    const playAlertSound = () => {
-      try {
-        const AudioContextClass =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext;
-        if (!AudioContextClass) return;
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-        const audioCtx = new AudioContextClass();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
+    return () => window.clearInterval(timer);
+  }, []);
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+  useEffect(() => {
+    const topIncidentId = incidents[0]?.id ?? null;
 
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    if (
+      previousTopIncidentId.current &&
+      previousTopIncidentId.current !== topIncidentId
+    ) {
+      const latestIncident = incidents[0];
 
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.5);
-      } catch (e) {
-        console.error("Audio alert failed:", e);
+      if (latestIncident) {
+        const timeoutId = window.setTimeout(() => {
+          setHighlightedIncidentId(latestIncident.id);
+          playAlertTone();
+
+          if (
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            new Notification("CrisisSync alert", {
+              body: `${latestIncident.category} in room ${latestIncident.roomNumber}`,
+              tag: latestIncident.id,
+            });
+          }
+
+          const clearId = window.setTimeout(() => {
+            setHighlightedIncidentId((current) =>
+              current === latestIncident.id ? null : current,
+            );
+          }, 3000);
+
+          alertTimeoutRef.current = clearId;
+        }, 0);
+
+        alertTimeoutRef.current = timeoutId;
+      }
+    }
+
+    previousTopIncidentId.current = topIncidentId;
+
+    return () => {
+      if (alertTimeoutRef.current !== null) {
+        window.clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = null;
       }
     };
-
-    const reportedIncidents = incidents.filter((i) => i.status === "REPORTED");
-    const prevCount = localStorage.getItem("lastReportedCount");
-    const currentCount = reportedIncidents.length;
-
-    if (prevCount !== null && currentCount > parseInt(prevCount)) {
-      playAlertSound();
-    }
-    localStorage.setItem("lastReportedCount", currentCount.toString());
   }, [incidents]);
 
-  const filteredIncidents = incidents.filter((incident) => {
-    if (statusFilter !== "ALL" && incident.status !== statusFilter) {
-      return false;
-    }
+  const staffRoster = useMemo<StaffListItem[]>(() => {
+    return initialStaff.map((staff) => {
+      const activeIncident = incidents.find(
+        (incident) =>
+          incident.assignedStaffId === staff.id &&
+          incident.status !== "RESOLVED",
+      );
 
-    if (!deferredSearch) {
-      return true;
-    }
+      return {
+        ...staff,
+        assignedRoom: activeIncident?.roomNumber ?? null,
+        assignedStatus: activeIncident?.status ?? null,
+        isBusy: Boolean(activeIncident),
+      };
+    });
+  }, [initialStaff, incidents]);
 
-    return [
-      incident.roomNumber,
-      incident.description,
-      incident.category,
-      incident.id,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(deferredSearch);
-  });
+  const activeIncidents = useMemo(
+    () => incidents.filter((incident) => incident.status !== "RESOLVED"),
+    [incidents],
+  );
 
-  const activeCount = incidents.filter(
-    (incident) => incident.status !== "RESOLVED",
-  ).length;
-  const unclaimedCount = incidents.filter(
-    (incident) => incident.status === "REPORTED",
-  ).length;
-  const inFlightCount = incidents.filter(
-    (incident) =>
-      incident.status === "ACKNOWLEDGED" || incident.status === "IN_PROGRESS",
-  ).length;
-  const resolvedCount = incidents.filter(
+  const activeResponderItems = useMemo<StaffListItem[]>(() => {
+    return staffRoster.filter((staff) => staff.assignedRoom);
+  }, [staffRoster]);
+
+  const totalActive = activeIncidents.length;
+  const resolvedToday = incidents.filter(
     (incident) => incident.status === "RESOLVED",
   ).length;
-  const totalCount = incidents.length;
-  const responseRate =
-    totalCount === 0 ? 0 : Math.round((resolvedCount / totalCount) * 100);
+  const avgResponseMinutes =
+    totalActive === 0
+      ? 0
+      : Math.max(
+          1,
+          Math.round(
+            activeIncidents.reduce((total, incident) => {
+              return (
+                total +
+                (currentTime.getTime() -
+                  new Date(incident.createdAt).getTime()) /
+                  60000
+              );
+            }, 0) / totalActive,
+          ),
+        );
   const latestIncident = incidents[0];
+  const selectedIncident =
+    incidents.find((incident) => incident.id === selectedIncidentId) ?? null;
 
-  async function updateStatus(
+  async function persistIncidentUpdate(
     incident: IncidentRecord,
     nextStatus: IncidentStatus,
   ) {
@@ -163,6 +191,8 @@ export function AdminDashboard({
       startTransition(() => {
         setIncidents((current) => mergeIncident(current, updatedIncident));
       });
+
+      emitIncidentEvent(socketEvents.status, updatedIncident);
     } catch (error) {
       startTransition(() => {
         setIncidents(snapshot);
@@ -178,382 +208,428 @@ export function AdminDashboard({
     }
   }
 
-  return (
-    <div className="space-y-6 md:space-y-7">
-      <SectionCard
-        eyebrow="Admin Command"
-        title="Coordinate every active incident from one place"
-        description="A focused operations console for triage, acknowledgement, and resolution. The layout keeps the critical queue visible first, then moves into the individual incident worklist."
-        tone="dark"
-        className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(9,23,30,0.98),rgba(13,34,44,0.95))] text-white shadow-[0_28px_90px_rgba(2,6,23,0.22)] border-white/10"
-      >
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -right-24 top-0 h-56 w-56 rounded-full bg-rose-500/20 blur-3xl" />
-          <div className="absolute -left-28 bottom-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
-        </div>
+  async function assignIncident(incident: IncidentRecord, staff: StaffMember) {
+    const snapshot = incidents;
+    setPendingId(incident.id);
+    setErrorMessage("");
 
-        <div className="relative flex flex-col gap-6">
-          <div className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100">
-                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_0_6px_rgba(52,211,153,0.12)]" />
-                  Live operations
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/65">
-                  {totalCount} incidents tracked
-                </span>
+    const optimisticIncident: IncidentRecord = {
+      ...incident,
+      assignedStaffId: staff.id,
+    };
+
+    startTransition(() => {
+      setIncidents((current) => mergeIncident(current, optimisticIncident));
+    });
+
+    try {
+      const response = await fetch(`/api/incidents/${incident.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: incident.status,
+          assignedStaffId: staff.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to assign the incident.");
+      }
+
+      const updatedIncident = (await response.json()) as IncidentRecord;
+
+      startTransition(() => {
+        setIncidents((current) => mergeIncident(current, updatedIncident));
+      });
+
+      emitIncidentEvent(socketEvents.assignment, updatedIncident);
+      setSelectedIncidentId(null);
+    } catch (error) {
+      startTransition(() => {
+        setIncidents(snapshot);
+      });
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to assign the incident.",
+      );
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  const latestElapsed = latestIncident
+    ? formatRelativeTime(latestIncident.createdAt)
+    : "No active incidents";
+
+  return (
+    <div className="min-h-screen bg-[#0B0F14] text-[#E5E7EB]">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-4 py-4 sm:px-6 lg:px-8">
+        <header className="sticky top-4 z-30 rounded-[28px] border border-[#1F2A37] bg-[rgba(11,15,20,0.92)] px-4 py-4 shadow-[0_16px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:px-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1F2A37] bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(139,92,246,0.16))] text-[#BFDBFE] shadow-[0_0_0_1px_rgba(59,130,246,0.08)]">
+                <ShieldAlert className="h-5 w-5" />
               </div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-5xl">
-                Command the queue without losing the signal.
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 md:text-base">
-                Triage stays fast when the most important details are surfaced
-                first: current load, response progress, and the newest
-                escalation.
-              </p>
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                    CrisisSync
+                  </h1>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
+                      connectionState === "connected"
+                        ? "border-emerald-400/20 bg-emerald-500/15 text-emerald-100"
+                        : "border-amber-400/20 bg-amber-500/15 text-amber-100"
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        connectionState === "connected"
+                          ? "bg-emerald-400"
+                          : "bg-amber-400"
+                      }`}
+                    />
+                    System Active
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[#9CA3AF]">
+                  Live emergency command center for hotel response teams.
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 md:justify-end">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-[#9CA3AF]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2">
+                <Clock3 className="h-4 w-4 text-[#6B7280]" />
+                {currentTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2">
+                <Users className="h-4 w-4 text-[#6B7280]" />
+                Admin: Olivia Hart
+              </div>
               <button
+                type="button"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   window.location.href = "/login";
                 }}
-                className="rounded-full border border-white/12 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/14"
+                className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#121821] px-4 py-2 font-semibold text-[#E5E7EB] transition hover:border-[#3B82F6]/35 hover:bg-[#15202d]"
               >
+                <LogOut className="h-4 w-4" />
                 Sign Out
               </button>
             </div>
           </div>
+        </header>
 
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr]">
-            <MetricCard
-              title="Active incidents"
-              value={String(activeCount)}
-              icon={BellRing}
-              accent="bg-rose-500/15 text-rose-100 ring-1 ring-inset ring-rose-400/20"
-              tone="text-white"
-              helper="Require triage now"
-            />
-            <MetricCard
-              title="Awaiting acknowledgement"
-              value={String(unclaimedCount)}
-              icon={Clock3}
-              accent="bg-amber-400/15 text-amber-100 ring-1 ring-inset ring-amber-300/20"
-              tone="text-white"
-              helper="Still waiting on a responder"
-            />
-            <MetricCard
-              title="Response completion"
-              value={`${responseRate}%`}
-              icon={ShieldCheck}
-              accent="bg-emerald-400/15 text-emerald-100 ring-1 ring-inset ring-emerald-300/20"
-              tone="text-white"
-              helper={`${resolvedCount} resolved of ${totalCount || 0}`}
-            />
-          </div>
-
-          <div className="grid gap-3 rounded-[24px] border border-white/10 bg-white/6 p-4 md:grid-cols-3">
-            <SummaryChip
-              label="Unclaimed"
-              value={unclaimedCount}
-              tone="text-amber-100"
-            />
-            <SummaryChip
-              label="In progress"
-              value={inFlightCount}
-              tone="text-sky-100"
-            />
-            <SummaryChip
-              label="Resolved"
-              value={resolvedCount}
-              tone="text-emerald-100"
-            />
-          </div>
-
-          <div className="grid gap-4 rounded-[24px] border border-white/10 bg-white/6 p-4 md:grid-cols-[1.4fr_0.9fr] md:items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
-                Latest escalation
-              </p>
-              <div className="mt-2 flex items-center gap-3">
-                <span className="inline-flex rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-white/80">
-                  {latestIncident ? latestIncident.category : "No incidents"}
-                </span>
-                <span className="text-sm text-white/60">
-                  {latestIncident
-                    ? `Room ${latestIncident.roomNumber}`
-                    : "Queue is clear"}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-white/68">
-                {latestIncident
-                  ? latestIncident.description || "No description provided."
-                  : "When a new report arrives, it will appear here with the freshest status and quickest action path."}
-              </p>
+        <main className="mt-6 grid flex-1 gap-6 xl:grid-cols-[minmax(0,2.1fr)_minmax(360px,1fr)]">
+          <section className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <StatsCard
+                title="Total Active Incidents"
+                value={String(totalActive)}
+                helper="Open incidents requiring immediate attention."
+                icon={BellRing}
+                tone="blue"
+              />
+              <StatsCard
+                title="Avg Response Time"
+                value={`${avgResponseMinutes}m`}
+                helper="Average age of incidents still in motion."
+                icon={Clock3}
+                tone="amber"
+              />
+              <StatsCard
+                title="Resolved Today"
+                value={String(resolvedToday)}
+                helper="Completed incidents cleared from the queue."
+                icon={ShieldCheck}
+                tone="emerald"
+              />
             </div>
-            <div className="rounded-[20px] border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
-                Operational snapshot
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-white/72">
+
+            <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <div className="text-xl font-semibold text-white">
-                    {totalCount}
-                  </div>
-                  <div className="mt-1 text-white/55">Tracked incidents</div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                    Incident feed
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
+                    New incidents appear at the top
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[#9CA3AF]">
+                    The queue is ordered by urgency and time. Assign responders,
+                    advance status, and resolve without leaving the feed.
+                  </p>
                 </div>
-                <div>
-                  <div className="text-xl font-semibold text-white">
-                    {activeCount}
-                  </div>
-                  <div className="mt-1 text-white/55">Need attention</div>
+
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#1F2A37] bg-[#0B0F14] px-4 py-2 text-sm text-[#9CA3AF]">
+                  <Sparkles className="h-4 w-4 text-[#3B82F6]" />
+                  {latestElapsed}
                 </div>
               </div>
+
+              {errorMessage ? (
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
+                  <TriangleAlert className="mt-0.5 h-4 w-4" />
+                  <span>{errorMessage}</span>
+                </div>
+              ) : null}
+
+              <div className="mt-5 space-y-4">
+                {incidents.length === 0 ? (
+                  <div className="rounded-[24px] border border-dashed border-[#1F2A37] bg-[#0B0F14] p-8 text-sm text-[#9CA3AF]">
+                    No incidents are currently active.
+                  </div>
+                ) : (
+                  incidents.map((incident) => (
+                    <IncidentCard
+                      key={incident.id}
+                      incident={incident}
+                      assignedStaffName={
+                        initialStaff.find(
+                          (staff) => staff.id === incident.assignedStaffId,
+                        )?.name
+                      }
+                      highlighted={highlightedIncidentId === incident.id}
+                      pending={pendingId === incident.id}
+                      onAssign={(selectedIncident) =>
+                        setSelectedIncidentId(selectedIncident.id)
+                      }
+                      onMarkInProgress={(selectedIncident) =>
+                        persistIncidentUpdate(selectedIncident, "IN_PROGRESS")
+                      }
+                      onResolve={(selectedIncident) =>
+                        persistIncidentUpdate(selectedIncident, "RESOLVED")
+                      }
+                    />
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      </SectionCard>
+          </section>
 
-      <SectionCard
-        eyebrow="Response Queue"
-        title="Incident feed"
-        description="Search across room numbers, incident types, and descriptions while the socket hook stays ready for live events."
-        tone="dark"
-        className="bg-[linear-gradient(180deg,rgba(11,29,38,0.98),rgba(7,18,25,0.98))] text-white shadow-[0_24px_80px_rgba(2,6,23,0.18)] border-white/10"
-      >
-        <div className="grid gap-4 rounded-[24px] border border-white/10 bg-white/6 p-4 md:grid-cols-[1.25fr_auto] md:items-center">
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/38" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search incidents by room, id, or description"
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/35 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/36 focus:border-white/30 focus:bg-slate-950/45"
+          <aside className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                  Situation summary
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
+                  Priority in one glance
+                </h2>
+
+                <div className="mt-5 space-y-3">
+                  <SummaryRow
+                    label="Reported"
+                    value={
+                      incidents.filter(
+                        (incident) => incident.status === "REPORTED",
+                      ).length
+                    }
+                    tone="red"
+                  />
+                  <SummaryRow
+                    label="In progress"
+                    value={
+                      incidents.filter(
+                        (incident) => incident.status === "IN_PROGRESS",
+                      ).length
+                    }
+                    tone="amber"
+                  />
+                  <SummaryRow
+                    label="Resolved"
+                    value={
+                      incidents.filter(
+                        (incident) => incident.status === "RESOLVED",
+                      ).length
+                    }
+                    tone="emerald"
+                  />
+                </div>
+
+                <div className="mt-5 rounded-[22px] border border-[#1F2A37] bg-[#0B0F14] p-4 text-sm text-[#9CA3AF]">
+                  Latest event:{" "}
+                  <span className="text-[#E5E7EB]">
+                    {latestIncident
+                      ? `${latestIncident.category} / room ${latestIncident.roomNumber}`
+                      : "None"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-[#1F2A37] bg-[#121821] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                  Alert system
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
+                  Sound and notification handling
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
+                  New incidents trigger a short tone and optional browser
+                  notification when permissions are enabled.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (
+                      typeof window !== "undefined" &&
+                      "Notification" in window &&
+                      Notification.permission === "default"
+                    ) {
+                      await Notification.requestPermission();
+                    }
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-[#3B82F6]/30 bg-[#3B82F6]/12 px-4 py-2.5 text-sm font-semibold text-[#BFDBFE] transition hover:border-[#3B82F6]/55 hover:bg-[#3B82F6]/18"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Enable notifications
+                </button>
+              </div>
+            </div>
+
+            <StaffList
+              title="Active responders"
+              helperText="Staff currently handling incidents and their live assignment status."
+              items={activeResponderItems}
+              emptyMessage="No responders are currently assigned."
+              footer={
+                <p className="text-xs leading-5 text-[#6B7280]">
+                  Responders automatically update when incidents are assigned or
+                  resolved.
+                </p>
+              }
             />
-          </label>
+          </aside>
+        </main>
+      </div>
 
-          <div className="flex flex-wrap gap-2 md:justify-end">
-            {statusFilterOptions.map((option) => (
+      {selectedIncident ? (
+        <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm">
+          <div className="absolute inset-y-0 right-0 w-full max-w-xl border-l border-[#1F2A37] bg-[#0B0F14] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                  Assignment panel
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#E5E7EB]">
+                  Assign a responder instantly
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+                  {selectedIncident.category} in room{" "}
+                  {selectedIncident.roomNumber} is waiting for ownership.
+                </p>
+              </div>
               <button
-                key={option}
                 type="button"
-                onClick={() => setStatusFilter(option)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  statusFilter === option
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "border border-white/10 bg-white/6 text-white/74 hover:bg-white/12"
-                }`}
+                onClick={() => setSelectedIncidentId(null)}
+                className="rounded-full border border-[#1F2A37] bg-[#121821] px-3 py-2 text-sm font-semibold text-[#E5E7EB] transition hover:border-[#3B82F6]/35"
               >
-                {option === "ALL" ? "All" : formatIncidentStatus(option)}
+                Close
               </button>
-            ))}
-          </div>
-        </div>
-
-        {errorMessage ? (
-          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
-            <TriangleAlert className="mt-0.5 h-4 w-4" />
-            <span>{errorMessage}</span>
-          </div>
-        ) : null}
-
-        <div className="mt-6 grid gap-4">
-          {filteredIncidents.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-8 text-sm text-white/62">
-              No incidents match the current filters.
             </div>
-          ) : (
-            filteredIncidents.map((incident) => (
-              <article
-                key={incident.id}
-                className="rounded-[28px] border border-white/10 bg-white/[0.08] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.18)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.11]"
-              >
-                <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(incident.status)}`}
-                      >
-                        {formatIncidentStatus(incident.status)}
-                      </span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getPriorityClasses(incident.priority)}`}
-                      >
-                        {incident.priority}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-medium text-white/72">
-                        #{incident.id}
-                      </span>
-                    </div>
-                    <h2 className="text-2xl font-semibold tracking-tight text-white md:text-[1.75rem]">
-                      {incident.category} in {incident.roomNumber}
-                    </h2>
-                    <p className="max-w-2xl text-sm leading-6 text-white/72">
-                      {incident.description || "No description provided."}
-                    </p>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <InfoPill
-                        label="Status"
-                        value={formatIncidentStatus(incident.status)}
-                      />
-                      <InfoPill label="Priority" value={incident.priority} />
-                      <InfoPill
-                        label="Reported"
-                        value={formatRelativeTime(incident.createdAt)}
-                      />
-                    </div>
-                  </div>
+            <div className="mt-5 rounded-[24px] border border-[#1F2A37] bg-[#121821] p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#E5E7EB]">
+                  Room {selectedIncident.roomNumber}
+                </span>
+                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
+                  {selectedIncident.category}
+                </span>
+                <span className="rounded-full border border-[#1F2A37] bg-[#0B0F14] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
+                  {selectedIncident.status}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-[#9CA3AF]">
+                {selectedIncident.description}
+              </p>
+            </div>
 
-                  <div className="rounded-[24px] border border-white/10 bg-slate-950/35 p-4 lg:ml-auto lg:w-full xl:max-w-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
-                          Incident snapshot
-                        </div>
-                        <div className="mt-2 text-lg font-semibold text-white">
-                          Room {incident.roomNumber}
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-right text-xs text-white/60">
-                        <div>Reported</div>
-                        <div className="mt-1 text-sm font-semibold text-white">
-                          {formatRelativeTime(incident.createdAt)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3">
-                      <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
-                        <div className="text-xs uppercase tracking-[0.2em] text-white/40">
-                          Incident ID
-                        </div>
-                        <div className="mt-2 break-all text-sm font-medium text-white/80">
-                          {incident.id}
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
-                        <div className="text-xs uppercase tracking-[0.2em] text-white/40">
-                          Description
-                        </div>
-                        <div className="mt-2 text-sm leading-6 text-white/70">
-                          {incident.description || "No description provided."}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            <div className="mt-5 space-y-3">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                Available staff
+              </p>
+              {staffRoster.length === 0 ? (
+                <div className="rounded-[24px] border border-dashed border-[#1F2A37] bg-[#121821] p-5 text-sm text-[#9CA3AF]">
+                  No staff roster available.
                 </div>
-
-                <div className="mt-5 flex flex-wrap gap-3 border-t border-white/10 pt-5">
-                  {incident.status === "REPORTED" ? (
-                    <ActionButton
-                      label="Acknowledge"
-                      disabled={pendingId === incident.id}
-                      onClick={() => updateStatus(incident, "ACKNOWLEDGED")}
-                    />
-                  ) : null}
-                  {incident.status === "ACKNOWLEDGED" ? (
-                    <ActionButton
-                      label="Mark in progress"
-                      disabled={pendingId === incident.id}
-                      onClick={() => updateStatus(incident, "IN_PROGRESS")}
-                    />
-                  ) : null}
-                  {incident.status === "IN_PROGRESS" ? (
-                    <ActionButton
-                      label="Resolve incident"
-                      disabled={pendingId === incident.id}
-                      onClick={() => updateStatus(incident, "RESOLVED")}
-                    />
-                  ) : null}
-                </div>
-              </article>
-            ))
-          )}
+              ) : (
+                <StaffList
+                  title="Responder roster"
+                  helperText="Choose the best available staff member for this incident."
+                  items={staffRoster}
+                  emptyMessage="No staff available for assignment."
+                  actionLabel="Assign instantly"
+                  onAction={(staff) => assignIncident(selectedIncident, staff)}
+                />
+              )}
+            </div>
+          </div>
         </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-function MetricCard({
-  title,
-  value,
-  icon: Icon,
-  accent,
-  tone = "text-[var(--ink-strong)]",
-  helper,
-}: {
-  title: string;
-  value: string;
-  icon: ComponentType<{ className?: string }>;
-  accent: string;
-  tone?: string;
-  helper?: string;
-}) {
-  return (
-    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5 backdrop-blur-sm">
-      <div className={`inline-flex rounded-2xl p-3 ${accent}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className={`mt-4 text-3xl font-semibold tracking-tight ${tone}`}>
-        {value}
-      </div>
-      <p className="mt-2 text-sm text-white/70">{title}</p>
-      {helper ? (
-        <p className="mt-3 text-xs leading-5 text-white/48">{helper}</p>
       ) : null}
     </div>
   );
 }
 
-function SummaryChip({
+function SummaryRow({
   label,
   value,
   tone,
 }: {
   label: string;
   value: number;
-  tone: string;
+  tone: "red" | "amber" | "emerald";
 }) {
-  return (
-    <div className="flex items-center justify-between rounded-[18px] border border-white/10 bg-slate-950/28 px-4 py-3">
-      <span className="text-sm text-white/58">{label}</span>
-      <span className={`text-lg font-semibold ${tone}`}>{value}</span>
-    </div>
-  );
-}
+  const toneStyles = {
+    red: "border-red-400/20 bg-red-500/12 text-red-100",
+    amber: "border-amber-400/20 bg-amber-500/12 text-amber-100",
+    emerald: "border-emerald-400/20 bg-emerald-500/12 text-emerald-100",
+  }[tone];
 
-function InfoPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3">
-      <div className="text-xs uppercase tracking-[0.2em] text-white/40">
-        {label}
-      </div>
-      <div className="mt-2 text-sm font-semibold text-white/80">{value}</div>
-    </div>
-  );
-}
-
-function ActionButton({
-  label,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+    <div
+      className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${toneStyles}`}
     >
-      {label}
-    </button>
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-lg font-semibold">{value}</span>
+    </div>
   );
+}
+
+function playAlertTone() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    const audioContext = new AudioContextClass();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.03, audioContext.currentTime);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.28);
+  } catch {
+    // Ignore browser audio failures quietly.
+  }
 }

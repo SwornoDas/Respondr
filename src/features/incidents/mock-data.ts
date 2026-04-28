@@ -33,6 +33,16 @@ export const seedIncidents: IncidentRecord[] = [
     createdAt: new Date(now - 18 * 60 * 1000).toISOString(),
     assignedStaffId: "staff-01",
   },
+  {
+    id: "INC-382",
+    category: "Medical",
+    roomNumber: "512",
+    description: "Guest fainted in the corridor and was assisted by staff.",
+    status: "RESOLVED",
+    priority: "High",
+    createdAt: new Date(now - 78 * 60 * 1000).toISOString(),
+    assignedStaffId: "staff-03",
+  },
 ];
 
 export const seedStaff: StaffMember[] = [

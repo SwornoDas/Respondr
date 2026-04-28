@@ -1,9 +1,24 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 import { AdminDashboard } from "@/features/incidents/components/admin-dashboard";
-import { listIncidents } from "@/features/incidents/server/store";
+import { seedIncidents, seedStaff } from "@/features/incidents/mock-data";
+import {
+  listIncidents,
+  listOnlineStaff,
+} from "@/features/incidents/server/store";
 
 export default async function AdminPage() {
-  const incidents = await listIncidents();
+  const [incidents, onlineStaff] = await Promise.all([
+    listIncidents(),
+    listOnlineStaff(),
+  ]);
 
-  return <AdminDashboard initialIncidents={incidents} />;
+  const initialIncidents = incidents.length > 0 ? incidents : seedIncidents;
+  const initialStaff = onlineStaff.length > 0 ? onlineStaff : seedStaff;
+
+  return (
+    <AdminDashboard
+      initialIncidents={initialIncidents}
+      initialStaff={initialStaff}
+    />
+  );
 }
